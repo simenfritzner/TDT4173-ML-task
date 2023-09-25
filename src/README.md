@@ -2,7 +2,7 @@ Example workflow:
 When in main:
 - git pull
 - git branch -b [branch name] (Personal name or algorithm or something, remove -b if already made a branch)
-yoyoyo
+
 When in branch:
 - At the start and end of each session:
 - git pull origin main
@@ -20,5 +20,5 @@ When your done with your code and are sure it works:
 - git push origin [branch-name]
 - Go to Pull requests on github and make the request
 - Need to figure out how we do it with pull requests
-
+YOOYOYOOYOYO
 
