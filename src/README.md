@@ -12,7 +12,7 @@ When in branch:
 - git add .
 - git commit -m "Explain short what you did"
 
-- When your done with your code and are sure it works:
+When your done with your code and are sure it works:
 - git pull origin main
 - Handle merge conflicts
 - git add .
