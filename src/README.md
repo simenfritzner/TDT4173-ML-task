@@ -1,4 +1,4 @@
-Example workflow, Dont work in main!:
+Example workflow, dont work in main!:
 When in main:
 - git pull
 - git branch -b [branch name] (Personal name or algorithm or something, remove -b if already made a branch)
