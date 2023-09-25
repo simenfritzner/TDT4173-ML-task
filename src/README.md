@@ -1,1 +1,1 @@
-Hei på deg
+Hei
