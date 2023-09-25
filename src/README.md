@@ -1,4 +1,4 @@
-Example workflow:
+Example workflow, Dont work in main!:
 When in main:
 - git pull
 - git branch -b [branch name] (Personal name or algorithm or something, remove -b if already made a branch)
@@ -20,5 +20,3 @@ When your done with your code and are sure it works:
 - git push origin [branch-name]
 - Go to Pull requests on github and make the request
 - Need to figure out how we do it with pull requests
-YOOYOYOOYOYO
-
