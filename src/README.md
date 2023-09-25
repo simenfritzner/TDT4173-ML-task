@@ -2,7 +2,7 @@ Example workflow:
 When in main:
 - git pull
 - git branch -b [branch name] (Personal name or algorithm or something, remove -b if already made a branch)
-yoyo
+yoyoyo
 When in branch:
 - At the start and end of each session:
 - git pull origin main
