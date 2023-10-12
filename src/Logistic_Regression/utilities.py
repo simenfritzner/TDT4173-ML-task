@@ -8,6 +8,7 @@ class Lin_reg():
     def __init__(self, X_observed, X_estimated, y, X_selected_features):
         self.model = LinearRegression()
         self.X_selected_features = X_selected_features
+        self.pred_estimated = None
         self.prepare_data(X_observed, X_estimated, y, self.X_selected_features)
         
     def fit(self):
@@ -32,17 +33,20 @@ class Lin_reg():
         self.X_test = scale_df(self.X_test)
         
     def pred(self, X_test = None):
+        max_value = self.y_train["pv_measurement"].max()
         if X_test is None:
             X_test = self.X_test
             self.pred_estimated = self.model.predict(X_test)
+            self.pred_estimated = self.pred_estimated.clip(min = 0, max = max_value)
             
         else:
             X_test = mean_df(X_test[self.X_selected_features]).drop(columns = ["date_forecast"]).copy()
             X_test = scale_df(X_test)
             self.pred = self.model.predict(X_test)
+            self.pred = self.pred.clip(min = 0, max = max_value)
             
     def mae(self):
-        if not hasattr(self, self.pred_estimated):
+        if self.pred_estimated is None:
             self.pred()
         return mean_absolute_error(self.y_test["pv_measurement"], self.pred_estimated)
     
