@@ -2,19 +2,76 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 import numpy as np
+from sklearn.metrics import mean_absolute_error
+
+class Lin_reg():
+    def __init__(self, X_observed, X_estimated, y, X_selected_features):
+        self.model = LinearRegression()
+        self.X_selected_features = X_selected_features
+        self.prepare_data(X_observed, X_estimated, y, self.X_selected_features)
+        
+    def fit(self):
+        self.model.fit(self.X_train, self.y_train["pv_measurement"])
+    
+    def prepare_data(self, X_observed, X_estimated, y, X_selected_features):
+        X_observed_clean = clean_df(X_observed, X_selected_features)
+        X_estimated_clean = clean_df(X_estimated, X_selected_features)
+        X_estimated_clean_mean = mean_df(X_estimated_clean)
+        self.X_train, self.X_valid, self.X_test = training_data_split(X_observed_clean, X_estimated_clean_mean)
+        self.resize_data(y)
+        self.scale_data()
+        
+    def resize_data(self,y):
+        self.X_train, self.y_train = resize_training_data(self.X_train, y)
+        self.X_valid, self.y_valid = resize_training_data(self.X_valid, y)
+        self.X_test, self.y_test = resize_training_data(self.X_test, y)
+        
+    def scale_data(self):
+        self.X_train = scale_df(self.X_train)
+        self.X_valid = scale_df(self.X_valid)
+        self.X_test = scale_df(self.X_test)
+        
+    def pred(self, X_test = None):
+        if X_test is None:
+            X_test = self.X_test
+            self.pred_estimated = self.model.predict(X_test)
+            
+        else:
+            X_test = mean_df(X_test[self.X_selected_features]).drop(columns = ["date_forecast"]).copy()
+            X_test = scale_df(X_test)
+            self.pred = self.model.predict(X_test)
+            
+    def mae(self):
+        if not hasattr(self, self.pred_estimated):
+            self.pred()
+        return mean_absolute_error(self.y_test["pv_measurement"], self.pred_estimated)
+    
+            
+#Scales all the feature value in a way they take a simmilar range
+def scale_df(df):
+    scaler = StandardScaler()
+    df = scaler.fit_transform(df)
+    return df
+
+#Removes all features from a df except selected_features
+def clean_df(df, selected_features):
+    return df[selected_features]
 
 #Function which resizes the training data such that only the rows with the same date and time for weather is kept.
 #X_train is either observed or forcasted weather and y_train is how much energy is produced. 
 #y_features are a list containing the column names of y_train
 #X_date_feature is the feature name which the date and time for the weather is savew. This will probably always be "date_forecast" and may be changed
-def resize_trainingdata(X_train, y_train, X_date_feature, y_features):
+def resize_training_data(X_train, y_train):
+    y_features = y_train.columns.tolist()
+    X_date_feature = "date_forecast"
+    
     merged = pd.merge(X_train, y_train,left_on=X_date_feature, right_on='time', how='inner')
     y_train_resized = merged[y_features]
     columns_to_drop = y_features + [X_date_feature]
     X_train_resized = merged.drop(columns = columns_to_drop)
     return X_train_resized, y_train_resized
 
-
+#Saves the predictions in proper format, y_pred needs to contain predicitions for all 3 locatoins
 def submission(filename, y_pred):
     test = pd.read_csv('CSV/test.csv')
     submission = pd.read_csv('CSV/sample_submission.csv')
@@ -22,44 +79,17 @@ def submission(filename, y_pred):
     submission = submission[['id']].merge(test[['id', 'prediction']], on='id', how='left')
     submission.to_csv(filename, index=False)
     
-def pred(X_observed, X_estimated, y, selected_features, X_test = None):
-    y_features = ["time", "pv_measurement"]
+#Splits the training data such that it is training set is observed and some estimated, valid is some estimated and test is some estimated
+def training_data_split(X_observed_clean, X_estimated_clean_mean):
+    X_train_estimated = X_estimated_clean_mean[:int(X_estimated_clean_mean.shape[0] * 3 / 4)]
+    X_valid = X_estimated_clean_mean[int(X_estimated_clean_mean.shape[0] * 3 / 4):int(X_estimated_clean_mean.shape[0] * 9 / 10)]
+    X_test = X_estimated_clean_mean[int(X_estimated_clean_mean.shape[0] * 9 / 10):]
     
-    X_observed_clean = mean_df(X_observed[selected_features])
-    X_estimated_clean = mean_df(X_estimated[selected_features])
-    #Training, validation and test
-    X_train_estimated = X_estimated_clean[:int(X_estimated_clean.shape[0] * 3 / 4)]
-    #X_valid_estimated = X_estimated_clean[int(X_estimated_clean.shape[0] * 3 / 4):int(X_estimated_clean.shape[0] * 9 / 10)]
-    X_test_estimated = X_estimated_clean[int(X_estimated_clean.shape[0] * 9 / 10):]
+    X_train = pd.concat([X_observed_clean, X_train_estimated])
+    return X_train, X_valid, X_test
     
-    #Training a Linear regression model on X_observed_a and testing it on X_estimated_a and evaluating it on MAE, PURELY for testing!
-    #See below for how its done when submitting
-    X_train_observed_resized, y_train_observed = resize_trainingdata(X_observed_clean, y, "date_forecast", y_features)
-    X_train_estimated_resized, y_train_estimated = resize_trainingdata(X_train_estimated, y, "date_forecast", y_features)
-    #X_valid_estimated_a_resized, y_valid_estimated_a = resize_trainingdata(X_valid_estimated_a, train_a, "date_forecast", y_features)
-    X_test_estimated_resized, y_test_estimated = resize_trainingdata(X_test_estimated, y, "date_forecast", y_features)
-    
-    X_train = pd.concat([X_train_observed_resized, X_train_estimated_resized ], ignore_index=True)
-    y_train = pd.concat([y_train_observed, y_train_estimated], ignore_index = True)
-    
-    #Scaling the data for more fair comparions and faster convergence, ChatGPT
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    
-    if X_test is None:
-        X_test_scaled = scaler.fit_transform(X_test_estimated_resized)
-    else:
-        X_test = mean_df(X_test[selected_features]).drop(columns = ["date_forecast"]).copy()
-        X_test_scaled = scaler.fit_transform(X_test)
-    
-    #Training the model
-    reg = LinearRegression()
-    reg.fit(X_train_scaled, y_train["pv_measurement"])
-    
-    # Make predictions
-    y_pred = reg.predict(X_test_scaled)
-    return y_pred, y_test_estimated
-
+#A function which takes the mean out of every 4th column and saves it on the time on the time of the 4th. Makes it so it is every hour.
+#TODO: Should be swapped for Gustavs code!
 def mean_df(df):
     # Assuming df is your DataFrame and 'date_forecast' is your date column
     # Making a copy of the DataFrame to avoid modifying the original data
@@ -78,3 +108,6 @@ def mean_df(df):
     averaged_data.reset_index(drop=True, inplace=True)
     averaged_data['date_forecast'] = date_column.values
     return averaged_data
+
+
+        
