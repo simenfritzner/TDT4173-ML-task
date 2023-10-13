@@ -3,6 +3,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 import numpy as np
 from sklearn.metrics import mean_absolute_error
+from sklearn.model_selection import train_test_split
 
 class Lin_reg():
     def __init__(self, X_observed, X_estimated, y, X_selected_features):
@@ -15,17 +16,19 @@ class Lin_reg():
         self.model.fit(self.X_train, self.y_train["pv_measurement"])
     
     def prepare_data(self, X_observed, X_estimated, y, X_selected_features):
+        
         X_observed_clean = clean_df(X_observed, X_selected_features)
         X_estimated_clean = clean_df(X_estimated, X_selected_features)
         X_estimated_clean_mean = mean_df(X_estimated_clean)
-        self.X_train, self.X_valid, self.X_test = training_data_split(X_observed_clean, X_estimated_clean_mean)
-        self.resize_data(y)
-        self.scale_data()
+        X_observed_clean_mean = mean_df(X_observed_clean)
         
-    def resize_data(self,y):
-        self.X_train, self.y_train = resize_training_data(self.X_train, y)
-        self.X_valid, self.y_valid = resize_training_data(self.X_valid, y)
-        self.X_test, self.y_test = resize_training_data(self.X_test, y)
+        X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
+        X_train, y = resize_training_data(X_train,y)
+        self.train_test_data_split(X_train, y)
+        #self.scale_data()
+        
+    def train_test_data_split(self, X, y):
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size = 0.05, shuffle = False)
         
     def scale_data(self):
         self.X_train = scale_df(self.X_train)
