@@ -18,3 +18,7 @@ def submission(filename, y_pred):
     test['prediction'] = y_pred
     submission = submission[['id']].merge(test[['id', 'prediction']], on='id', how='left')
     submission.to_csv(filename, index=False)
+    
+    
+def custom_mean(group):
+    return group.apply(lambda x: np.nanmean(x))
