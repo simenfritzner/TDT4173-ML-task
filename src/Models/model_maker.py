@@ -7,7 +7,7 @@ import matplotlib.pylab as plt
 class model():
     def __init__(self):
         pass
-        
+      
     def fit(self):
         self.model.fit(self.X_train, self.y_train["pv_measurement"])
     
@@ -40,7 +40,7 @@ class model():
             
         else:
             X_test = mean_df(X_test[self.X_selected_features]).drop(columns = ["date_forecast"]).copy()
-            X_test = scale_df(X_test)
+            #X_test = scale_df(X_test)
             self.prediction = self.model.predict(X_test)
             self.prediction = self.prediction.clip(min = 0, max = max_value)
             

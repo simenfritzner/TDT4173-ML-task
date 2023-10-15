@@ -7,4 +7,5 @@ class Lin_reg(model):
         self.X_selected_features = X_selected_features
         self.pred_estimated = None
         self.prepare_data(X_observed, X_estimated, y, self.X_selected_features)
-    
+        
+    def foo():
