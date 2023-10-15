@@ -22,7 +22,7 @@ class model():
         X_train, y = resize_training_data(X_train,y)
         self.train_test_data_split(X_train, y)
         #self.scale_data()
-        
+
     def train_test_data_split(self, X, y):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size = 0.1, shuffle = False)
         
