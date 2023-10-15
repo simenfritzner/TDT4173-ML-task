@@ -7,7 +7,7 @@ import matplotlib.pylab as plt
 class model():
     def __init__(self):
         pass
-      
+    
     def fit(self):
         self.model.fit(self.X_train, self.y_train["pv_measurement"])
     
@@ -21,15 +21,19 @@ class model():
         X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
         X_train, y = resize_training_data(X_train,y)
         self.train_test_data_split(X_train, y)
+<<<<<<< HEAD
         #self.scale_data()
 
+=======
+        self.scale_data()
+        
+>>>>>>> 0facd933413d2126781af1eeefb850729c29db2d
     def train_test_data_split(self, X, y):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size = 0.1, shuffle = False)
         
     def scale_data(self):
-        self.X_train = scale_df(self.X_train)
-        self.X_valid = scale_df(self.X_valid)
-        self.X_test = scale_df(self.X_test)
+        self.X_train = scale_df(self.X_train, True)
+        self.X_test = scale_df(self.X_test, False)
         
     def pred(self, X_test = None):
         max_value = self.y_train["pv_measurement"].max()
@@ -40,7 +44,7 @@ class model():
             
         else:
             X_test = mean_df(X_test[self.X_selected_features]).drop(columns = ["date_forecast"]).copy()
-            #X_test = scale_df(X_test)
+            X_test = scale_df(X_test, False)
             self.prediction = self.model.predict(X_test)
             self.prediction = self.prediction.clip(min = 0, max = max_value)
             
