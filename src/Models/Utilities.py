@@ -55,3 +55,64 @@ def mean_df(df):
     averaged_data.reset_index(drop=True, inplace=True)
     averaged_data['date_forecast'] = date_column.values
     return averaged_data
+
+# Function to delete ranges of more than [desired amount of] zeros
+def delete_ranges_of_zeros_and_interrupting_values(df, number_of_recurring_zeros, interrupting_values = []):
+    count = 0
+    drop_indices = []
+
+    df = df.dropna()
+
+    for index, row in df.iterrows():
+        if row["pv_measurement"] == 0 or row["pv_measurement"] in interrupting_values:
+            count += 1
+        else:
+            if count > number_of_recurring_zeros:
+                drop_indices.extend(df.index[index - count:index])
+            count = 0
+
+    if count > number_of_recurring_zeros:
+        drop_indices.extend(df.index[index - count + 1:index + 1])
+
+    df.drop(drop_indices, inplace=True)
+
+    return df
+
+def delete_repeating_sequences_with_interrupting_values(df, interrupting_numbers):
+    sequence_start = None
+    last_value = None
+    to_be_deleted = []
+    for index, row in df.iterrows():
+        current_value = row['pv_measurement']
+
+        if current_value != 0:
+            if sequence_start is None:
+                sequence_start = index
+                last_value = current_value
+            elif current_value != last_value or current_value in interrupting_numbers:
+                to_be_deleted.extend(list(range(sequence_start, index)))
+                sequence_start = index
+            last_value = current_value
+        else:
+            sequence_start = None
+
+    df = df.drop(to_be_deleted)
+    return df
+
+def remove_repeating_non_zero_numbers(df):
+    df['indicator'] = (df['pv_measurement'] != 0).astype(int)  # create an indicator column for non-zero values
+    df['group'] = (df['indicator'] != df['indicator'].shift()).cumsum()  # create groups for consecutive non-zero values
+
+    df = df[~((df['indicator'] != 0) & (df.groupby('group')['pv_measurement'].transform('nunique') == 1))]  # filter out rows with repeating non-zero sequences
+
+    df.drop(['indicator', 'group'], axis=1, inplace=True)  # drop the indicator and group columns
+
+    return df
+
+#Saves the predictions in proper format, y_pred needs to contain predicitions for all 3 locatoins
+def submission(filename, y_pred, path_to_src):
+    test = pd.read_csv(path_to_src + '/Data/CSV/test.csv')
+    submission = pd.read_csv(path_to_src + '/Data/CSV/sample_submission.csv')
+    test['prediction'] = y_pred
+    submission = submission[['id']].merge(test[['id', 'prediction']], on='id', how='left')
+    submission.to_csv(filename, index=False)
