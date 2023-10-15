@@ -8,7 +8,10 @@ import numpy as np
 #y_features are a list containing the column names of y_train
 #X_date_feature is the feature name which the date and time for the weather is savew. This will probably always be "date_forecast" and may be changed
 
+#resize_trainingdata(X_train_observed_a_clean_selected_features, train_a, "date_forecast", y_features)
+
 def resize_trainingdata(X_train, y_train, X_date_feature, y_features):
+    y_train.dropna(inplace=True)
     merged = pd.merge(X_train, y_train,left_on=X_date_feature, right_on='time', how='inner')
     y_train_resized = merged[y_features]
     columns_to_drop = y_features + [X_date_feature]
@@ -71,3 +74,73 @@ def correlation(X_frame,Y_frame):
     correlation = correlation_df.corr()
 
     return correlation
+
+# Function to delete sequences with repeating numbers
+def delete_sequence_with_repeating_numbers(df, column_name, threshold):
+    count = 1
+    prev_value = df.iloc[0][column_name]
+    indexes_to_drop = []
+    drop_ranges = []
+    for index, row in df.iterrows():
+        if row[column_name] == prev_value:
+            count += 1
+        else:
+            if count > threshold:
+                drop_ranges.append((index - count, index - 1))
+                indexes_to_drop.extend(range(index - count, index))
+            count = 1
+            prev_value = row[column_name]
+    if count > threshold:
+        drop_ranges.append((len(df) - count, len(df) - 1))
+        indexes_to_drop.extend(range(len(df) - count, len(df)))
+
+    df.drop(indexes_to_drop, inplace=True)
+
+    return drop_ranges
+
+def round_to_two_decimals(df, column_name):
+    for index, row in df.iterrows():
+        if isinstance(row[column_name], float):
+            if len(str(row[column_name]).split('.')[-1]) > 2:
+                df.at[index, column_name] = round(row[column_name], 2)
+
+
+# Function to delete repeating non-zero numbers
+def delete_repeating_non_zero_numbers(df, column_name, threshold):
+    count = 1
+    prev_value = df.iloc[0][column_name]
+    drop_indices = []
+    start = 0
+
+    for index, row in df.iterrows():
+        if row[column_name] == prev_value and row[column_name] != 0:
+            count += 1
+        else:
+            if count > threshold:
+                drop_indices.extend(range(start, start + count))
+            count = 1
+            start = index
+            prev_value = row[column_name]
+
+    if count > threshold:
+        drop_indices.extend(range(start, start + count))
+
+    df.drop(df.index[drop_indices], inplace=True)
+
+# Function to delete ranges of more than 22 zeros
+def delete_ranges_of_zeros(df, column_name, threshold, interrupting_values):
+    count = 0
+    drop_indices = []
+
+    for index, row in df.iterrows():
+        if row[column_name] == 0 or row[column_name] in interrupting_values:
+            count += 1
+        else:
+            if count > threshold:
+                drop_indices.extend(df.index[index - count:index])
+            count = 0
+
+    if count > threshold:
+        drop_indices.extend(df.index[index - count + 1:index + 1])
+
+    df.drop(drop_indices, inplace=True)
