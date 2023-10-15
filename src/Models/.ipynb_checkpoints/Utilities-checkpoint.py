@@ -1,11 +1,19 @@
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import RobustScaler
 import numpy as np
+
+#scaler = StandardScaler()
+#scaler = MinMaxScaler()
+scaler = RobustScaler()
             
 #Scales all the feature value in a way they take a simmilar range
-def scale_df(df):
-    scaler = StandardScaler()
-    df = scaler.fit_transform(df)
+def scale_df(df, fit):
+    if fit == True:
+        df = scaler.fit_transform(df)
+    else:
+        df = scaler.transform(df)
     return df
 
 #Removes all features from a df except selected_features
