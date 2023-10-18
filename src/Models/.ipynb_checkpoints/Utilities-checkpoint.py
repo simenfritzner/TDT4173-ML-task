@@ -64,11 +64,11 @@ def mean_df(df):
     # Step 1: Keeping every 4th row in the date column
     date_column = df_copy['date_forecast'].iloc[::4]
     
-    #Made it such that all the intresting columns having data for 1 hour average back in time is saved such for the last hour. Ex diffuse_rad_1h:j cl. 23:00 is used for the weather prediction 22:00
+    """#Made it such that all the intresting columns having data for 1 hour average back in time is saved such for the last hour. Ex diffuse_rad_1h:j cl. 23:00 is used for the weather prediction 22:00
     selected_col = ['diffuse_rad_1h:J', 'direct_rad_1h:J']
     selected_values = df_copy[selected_col].iloc[4::4].reset_index(drop=True)
     last_row = pd.DataFrame(df_copy[selected_col].iloc[-1]).T.reset_index(drop=True)
-    selected_values = pd.concat([selected_values, last_row], ignore_index=True)
+    selected_values = pd.concat([selected_values, last_row], ignore_index=True)"""
     
     # Step 2: Creating a grouping key
     grouping_key = np.floor(np.arange(len(df_copy)) / 4)
@@ -89,3 +89,66 @@ def submission(filename, y_pred, path_to_src):
     test['prediction'] = y_pred
     submission = submission[['id']].merge(test[['id', 'prediction']], on='id', how='left')
     submission.to_csv(path_to_src + "/Data/CSV/" + filename, index=False)
+
+    def drop_repeating_sequences(df):
+    indexes_to_drop = []
+    prev_val = None
+    consecutive_count = 0
+
+    for i, val in enumerate(df["pv_measurement"]):
+        if val != 0:
+            if val == prev_val:
+                consecutive_count += 1
+            else:
+                prev_val = val
+                consecutive_count = 0
+
+            if consecutive_count >= 1:
+                indexes_to_drop.extend([i - consecutive_count, i])
+
+    return df.drop(indexes_to_drop)
+
+def delete_ranges_of_zeros_and_interrupting_values(df, number_of_recurring_zeros, interrupting_values = []):
+    count = 0
+    drop_indices = []
+
+    df = df.dropna()
+
+    for index, row in df.iterrows():
+        if row["pv_measurement"] == 0 or row["pv_measurement"] in interrupting_values:
+            count += 1
+        else:
+            if count > number_of_recurring_zeros:
+                drop_indices.extend(df.index[index - count:index])
+            count = 0
+
+    if count > number_of_recurring_zeros:
+        drop_indices.extend(df.index[index - count + 1:index + 1])
+
+    df.drop(drop_indices, inplace=True)
+
+    return df
+
+def drop_long_sequences(df, x):
+    indexes_to_drop = []
+    zero_count = 0
+
+    for i, val in enumerate(df['pv_measurement']):
+        if val == 0:
+            zero_count += 1
+        else:
+            if zero_count >= x:
+                start_index = i - zero_count
+                end_index = i - 1  # inclusive
+                if start_index >= 0 and end_index < len(df):
+                    indexes_to_drop.extend(list(range(start_index, end_index + 1)))
+            zero_count = 0
+
+    # In case the sequence ends with zeros, this will handle it
+    if zero_count >= x:
+        start_index = len(df) - zero_count
+        end_index = len(df) - 1
+        if start_index >= 0 and end_index < len(df):
+            indexes_to_drop.extend(list(range(start_index, end_index + 1)))
+
+    return df.drop(df.index[indexes_to_drop])
