@@ -21,6 +21,7 @@ class model():
         X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
         X_train = date_forecast_to_time(X_train)
         X_train, y = resize_training_data(X_train,y)
+        self.X_columns = X_train.columns
         self.train_test_data_split(X_train, y)
         self.scale_data()
         
@@ -47,6 +48,11 @@ class model():
             
     def mae(self):
         return mean_absolute_error(self.y_test["pv_measurement"], self.pred_estimated)
+    
+    def feature_importence_plot(self):
+        self.model.feature_importances_
+        plt.figure(figsize=(20,10))
+        plt.barh(self.X_columns, self.model.feature_importances_)
     
     def corr_plot(self):
         # Calculate correlation coefficient

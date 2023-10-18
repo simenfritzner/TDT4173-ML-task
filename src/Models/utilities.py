@@ -64,8 +64,8 @@ def mean_df(df):
     # Step 1: Keeping every 4th row in the date column
     date_column = df_copy['date_forecast'].iloc[::4]
     
+    #Made it such that all the intresting columns having data for 1 hour average back in time is saved such for the last hour. Ex diffuse_rad_1h:j cl. 23:00 is used for the weather prediction 22:00
     selected_col = ['diffuse_rad_1h:J', 'direct_rad_1h:J',  'clear_sky_energy_1h:J']
-    
     selected_values = df_copy[selected_col].iloc[4::4].reset_index(drop=True)
     last_row = pd.DataFrame(df_copy[selected_col].iloc[-1]).T.reset_index(drop=True)
     selected_values = pd.concat([selected_values, last_row], ignore_index=True)
