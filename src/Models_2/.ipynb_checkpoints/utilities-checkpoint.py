@@ -7,17 +7,6 @@ import numpy as np
 #scaler = StandardScaler()
 #scaler = MinMaxScaler()
 scaler = RobustScaler()
-
-def date_forecast_to_time(df):
-    df['month'] = df['date_forecast'].dt.month
-    df['hour'] = df['date_forecast'].dt.hour
-    df['day'] = df['date_forecast'].dt.day
-    
-    df['hour_sin'] = np.sin(df['hour'] * (2. * np.pi / 24))
-    df['hour_cos'] = np.cos(df['hour'] * (2. * np.pi / 24))
-    df['month_sin'] = np.sin((df['month']-1) * (2. * np.pi / 12))
-    df['month_cos'] = np.cos((df['month']-1) * (2. * np.pi / 12))
-    return df
             
 #Scales all the feature value in a way they take a simmilar range
 def scale_df(df, fit):
@@ -26,6 +15,30 @@ def scale_df(df, fit):
     else:
         df = scaler.transform(df)
     return df
+
+def date_forcast_to_time(df):
+    df['month'] = df['date_forecast'].dt.month
+    df['hour'] = df['date_forecast'].dt.hour
+    df['day'] = df['date_forecast'].dt.day
+    
+    df['hour_sin'] = np.sin(df['hour'] * (2. * np.pi / 24))
+    df['hour_cos'] = np.cos(df['hour'] * (2. * np.pi / 24))
+    df['month_sin'] = np.sin((df['month']-1) * (2. * np.pi / 12))
+    df['month_cos'] = np.cos((df['month']-1) * (2. * np.pi / 12))
+    #df['day_and_shadow'] = ((df['is_day:idx'] == 1) & (df['is_in_shadow:idx'] == 1)).astype(int)
+    return df
+
+def assign_value(hour):
+    if hour in [0, 1, 21, 22, 23]:
+        return 0
+    else:
+        return 1
+    
+def apply_floor_sun_elevation(sun_elevation):
+    if sun_elevation > 0:
+        return 0
+    else: 
+        return 1
 
 #Removes all features from a df except selected_features
 def clean_df(df, selected_features):
@@ -64,8 +77,8 @@ def mean_df(df):
     # Step 1: Keeping every 4th row in the date column
     date_column = df_copy['date_forecast'].iloc[::4]
     
-    #Made it such that all the intresting columns having data for 1 hour average back in time is saved such for the last hour. Ex diffuse_rad_1h:j cl. 23:00 is used for the weather prediction 22:00
     selected_col = ['diffuse_rad_1h:J', 'direct_rad_1h:J']
+    
     selected_values = df_copy[selected_col].iloc[4::4].reset_index(drop=True)
     last_row = pd.DataFrame(df_copy[selected_col].iloc[-1]).T.reset_index(drop=True)
     selected_values = pd.concat([selected_values, last_row], ignore_index=True)
@@ -82,10 +95,44 @@ def mean_df(df):
     return averaged_data
 
 #Saves the predictions in proper format, y_pred needs to contain predicitions for all 3 locatoins
-
 def submission(filename, y_pred, path_to_src):
     test = pd.read_csv(path_to_src + '/Data/CSV/test.csv')
     submission = pd.read_csv(path_to_src + '/Data/CSV/sample_submission.csv')
     test['prediction'] = y_pred
     submission = submission[['id']].merge(test[['id', 'prediction']], on='id', how='left')
     submission.to_csv(path_to_src + "/Data/CSV/" + filename, index=False)
+    
+def correlation(X_frame,Y_frame):
+
+    # Concatenating DataFrames along columns
+    correlation_df = pd.concat([X_frame, Y_frame], axis=1)
+
+    # Calculating correlation
+    correlation = correlation_df.corr()
+
+    return correlation
+
+def generate_features_and_predict(X_test, model, last_known_values, window_size=3):
+    predictions = []
+    
+    for i in range(len(X_test)):
+        # Step 1: Generating Lag Feature
+        lag_feature = predictions[-1] if predictions else last_known_values.iloc[-1]
+        X_test.at[i, 'pv_measurement_lag1'] = lag_feature
+        
+        # Step 2: Generating Rolling Mean Feature
+        relevant_values = (list(last_known_values.iloc[-window_size+1+i:]) +
+                           predictions[-window_size+1:])
+        
+        X_test.at[i, 'pv_measurement_rolling_mean3'] = (
+            np.mean(relevant_values) if len(relevant_values) >= window_size else np.nan
+        )
+        # Handling NaN values by filling with the mean of the column
+        X_test = X_test.fillna(0)
+        if i == 6:
+            print(X_test)
+        # Making a prediction with the generated features
+        prediction = model.predict(X_test.iloc[i].values.reshape(1, -1))[0]
+        predictions.append(prediction)
+        
+    return predictions

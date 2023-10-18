@@ -1,30 +1,60 @@
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.preprocessing import RobustScaler
+from sklearn.linear_model import LinearRegression
 import numpy as np
+from sklearn.metrics import mean_absolute_error
 
-#scaler = StandardScaler()
-#scaler = MinMaxScaler()
-scaler = RobustScaler()
-
-def date_forecast_to_time(df):
-    df['month'] = df['date_forecast'].dt.month
-    df['hour'] = df['date_forecast'].dt.hour
-    df['day'] = df['date_forecast'].dt.day
+class Lin_reg():
+    def __init__(self, X_observed, X_estimated, y, X_selected_features):
+        self.model = LinearRegression()
+        self.X_selected_features = X_selected_features
+        self.pred_estimated = None
+        self.prepare_data(X_observed, X_estimated, y, self.X_selected_features)
+        
+    def fit(self):
+        self.model.fit(self.X_train, self.y_train["pv_measurement"])
     
-    df['hour_sin'] = np.sin(df['hour'] * (2. * np.pi / 24))
-    df['hour_cos'] = np.cos(df['hour'] * (2. * np.pi / 24))
-    df['month_sin'] = np.sin((df['month']-1) * (2. * np.pi / 12))
-    df['month_cos'] = np.cos((df['month']-1) * (2. * np.pi / 12))
-    return df
+    def prepare_data(self, X_observed, X_estimated, y, X_selected_features):
+        X_observed_clean = clean_df(X_observed, X_selected_features)
+        X_estimated_clean = clean_df(X_estimated, X_selected_features)
+        X_estimated_clean_mean = mean_df(X_estimated_clean)
+        self.X_train, self.X_valid, self.X_test = training_data_split(X_observed_clean, X_estimated_clean_mean)
+        self.resize_data(y)
+        self.scale_data()
+        
+    def resize_data(self,y):
+        self.X_train, self.y_train = resize_training_data(self.X_train, y)
+        self.X_valid, self.y_valid = resize_training_data(self.X_valid, y)
+        self.X_test, self.y_test = resize_training_data(self.X_test, y)
+        
+    def scale_data(self):
+        self.X_train = scale_df(self.X_train)
+        self.X_valid = scale_df(self.X_valid)
+        self.X_test = scale_df(self.X_test)
+        
+    def pred(self, X_test = None):
+        max_value = self.y_train["pv_measurement"].max()
+        if X_test is None:
+            X_test = self.X_test
+            self.pred_estimated = self.model.predict(X_test)
+            self.pred_estimated = self.pred_estimated.clip(min = 0, max = max_value)
+            
+        else:
+            X_test = mean_df(X_test[self.X_selected_features]).drop(columns = ["date_forecast"]).copy()
+            X_test = scale_df(X_test)
+            self.pred = self.model.predict(X_test)
+            self.pred = self.pred.clip(min = 0, max = max_value)
+            
+    def mae(self):
+        if self.pred_estimated is None:
+            self.pred()
+        return mean_absolute_error(self.y_test["pv_measurement"], self.pred_estimated)
+    
             
 #Scales all the feature value in a way they take a simmilar range
-def scale_df(df, fit):
-    if fit == True:
-        df = scaler.fit_transform(df)
-    else:
-        df = scaler.transform(df)
+def scale_df(df):
+    scaler = StandardScaler()
+    df = scaler.fit_transform(df)
     return df
 
 #Removes all features from a df except selected_features
@@ -44,6 +74,14 @@ def resize_training_data(X_train, y_train):
     columns_to_drop = y_features + [X_date_feature]
     X_train_resized = merged.drop(columns = columns_to_drop)
     return X_train_resized, y_train_resized
+
+#Saves the predictions in proper format, y_pred needs to contain predicitions for all 3 locatoins
+def submission(filename, y_pred):
+    test = pd.read_csv('CSV/test.csv')
+    submission = pd.read_csv('CSV/sample_submission.csv')
+    test['prediction'] = y_pred
+    submission = submission[['id']].merge(test[['id', 'prediction']], on='id', how='left')
+    submission.to_csv(filename, index=False)
     
 #Splits the training data such that it is training set is observed and some estimated, valid is some estimated and test is some estimated
 def training_data_split(X_observed_clean, X_estimated_clean_mean):
@@ -64,28 +102,16 @@ def mean_df(df):
     # Step 1: Keeping every 4th row in the date column
     date_column = df_copy['date_forecast'].iloc[::4]
     
-    #Made it such that all the intresting columns having data for 1 hour average back in time is saved such for the last hour. Ex diffuse_rad_1h:j cl. 23:00 is used for the weather prediction 22:00
-    selected_col = ['diffuse_rad_1h:J', 'direct_rad_1h:J']
-    selected_values = df_copy[selected_col].iloc[4::4].reset_index(drop=True)
-    last_row = pd.DataFrame(df_copy[selected_col].iloc[-1]).T.reset_index(drop=True)
-    selected_values = pd.concat([selected_values, last_row], ignore_index=True)
-    
     # Step 2: Creating a grouping key
     grouping_key = np.floor(np.arange(len(df_copy)) / 4)
     
     # Step 3: Group by the key and calculate the mean, excluding the date column
     averaged_data = df_copy.drop(columns=['date_forecast']).groupby(grouping_key).mean()
+    
     # Step 4: Reset index and merge the date column
     averaged_data.reset_index(drop=True, inplace=True)
     averaged_data['date_forecast'] = date_column.values
-    #averaged_data[selected_col] = selected_values.values
     return averaged_data
 
-#Saves the predictions in proper format, y_pred needs to contain predicitions for all 3 locatoins
 
-def submission(filename, y_pred, path_to_src):
-    test = pd.read_csv(path_to_src + '/Data/CSV/test.csv')
-    submission = pd.read_csv(path_to_src + '/Data/CSV/sample_submission.csv')
-    test['prediction'] = y_pred
-    submission = submission[['id']].merge(test[['id', 'prediction']], on='id', how='left')
-    submission.to_csv(path_to_src + "/Data/CSV/" + filename, index=False)
+        

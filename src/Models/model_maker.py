@@ -8,9 +8,6 @@ class model():
     def __init__(self):
         pass
     
-    def fit(self):
-        self.model.fit(self.X_train, self.y_train["pv_measurement"])
-    
     def prepare_data(self, X_observed, X_estimated, y, X_selected_features):
         
         X_observed_clean = clean_df(X_observed, X_selected_features)
@@ -23,7 +20,7 @@ class model():
         X_train, y = resize_training_data(X_train,y)
         self.X_columns = X_train.columns
         self.train_test_data_split(X_train, y)
-        self.scale_data()
+        #self.scale_data()
         
     def train_test_data_split(self, X, y):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size = 0.1, shuffle = True, random_state = 42)
@@ -42,7 +39,7 @@ class model():
         else:
             X_test = mean_df(X_test[self.X_selected_features])
             X_test = date_forecast_to_time(X_test).drop(columns = ['date_forecast'])
-            X_test = scale_df(X_test, False)
+            #X_test = scale_df(X_test, False)
             self.prediction = self.model.predict(X_test)
             self.prediction = self.prediction.clip(min = 0, max = max_value)
             
