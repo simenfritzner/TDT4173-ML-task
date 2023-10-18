@@ -7,6 +7,17 @@ import numpy as np
 #scaler = StandardScaler()
 #scaler = MinMaxScaler()
 scaler = RobustScaler()
+
+def date_forcast_to_time(df):
+    df['month'] = df['date_forecast'].dt.month
+    df['hour'] = df['date_forecast'].dt.hour
+    df['day'] = df['date_forecast'].dt.day
+    
+    df['hour_sin'] = np.sin(df['hour'] * (2. * np.pi / 24))
+    df['hour_cos'] = np.cos(df['hour'] * (2. * np.pi / 24))
+    df['month_sin'] = np.sin((df['month']-1) * (2. * np.pi / 12))
+    df['month_cos'] = np.cos((df['month']-1) * (2. * np.pi / 12))
+    return df
             
 #Scales all the feature value in a way they take a simmilar range
 def scale_df(df, fit):
