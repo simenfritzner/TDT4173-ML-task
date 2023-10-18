@@ -8,7 +8,7 @@ import numpy as np
 #scaler = MinMaxScaler()
 scaler = RobustScaler()
 
-def date_forcast_to_time(df):
+def date_forecast_to_time(df):
     df['month'] = df['date_forecast'].dt.month
     df['hour'] = df['date_forecast'].dt.hour
     df['day'] = df['date_forecast'].dt.day
