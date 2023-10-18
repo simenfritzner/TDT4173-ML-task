@@ -63,3 +63,11 @@ def mean_df(df):
     averaged_data.reset_index(drop=True, inplace=True)
     averaged_data['date_forecast'] = date_column.values
     return averaged_data
+
+
+def submission(filename, y_pred, path_to_src):
+    test = pd.read_csv(path_to_src + '/Data/CSV/test.csv')
+    submission = pd.read_csv(path_to_src + '/Data/CSV/sample_submission.csv')
+    test['prediction'] = y_pred
+    submission = submission[['id']].merge(test[['id', 'prediction']], on='id', how='left')
+    submission.to_csv(path_to_src + "/Data/CSV" + filename, index=False)

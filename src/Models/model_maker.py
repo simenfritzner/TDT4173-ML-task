@@ -21,13 +21,8 @@ class model():
         X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
         X_train, y = resize_training_data(X_train,y)
         self.train_test_data_split(X_train, y)
-<<<<<<< HEAD
-        #self.scale_data()
-
-=======
         self.scale_data()
         
->>>>>>> 0facd933413d2126781af1eeefb850729c29db2d
     def train_test_data_split(self, X, y):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size = 0.1, shuffle = False)
         
