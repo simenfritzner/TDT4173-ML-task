@@ -64,6 +64,7 @@ def mean_df(df):
     averaged_data['date_forecast'] = date_column.values
     return averaged_data
 
+#Saves the predictions in proper format, y_pred needs to contain predicitions for all 3 locatoins
 
 def submission(filename, y_pred, path_to_src):
     test = pd.read_csv(path_to_src + '/Data/CSV/test.csv')
