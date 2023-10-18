@@ -64,15 +64,21 @@ def mean_df(df):
     # Step 1: Keeping every 4th row in the date column
     date_column = df_copy['date_forecast'].iloc[::4]
     
+    selected_col = ['diffuse_rad_1h:J', 'direct_rad_1h:J',  'clear_sky_energy_1h:J']
+    
+    selected_values = df_copy[selected_col].iloc[4::4].reset_index(drop=True)
+    last_row = pd.DataFrame(df_copy[selected_col].iloc[-1]).T.reset_index(drop=True)
+    selected_values = pd.concat([selected_values, last_row], ignore_index=True)
+    
     # Step 2: Creating a grouping key
     grouping_key = np.floor(np.arange(len(df_copy)) / 4)
     
     # Step 3: Group by the key and calculate the mean, excluding the date column
     averaged_data = df_copy.drop(columns=['date_forecast']).groupby(grouping_key).mean()
-    
     # Step 4: Reset index and merge the date column
     averaged_data.reset_index(drop=True, inplace=True)
     averaged_data['date_forecast'] = date_column.values
+    #averaged_data[selected_col] = selected_values.values
     return averaged_data
 
 #Saves the predictions in proper format, y_pred needs to contain predicitions for all 3 locatoins

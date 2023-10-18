@@ -39,8 +39,8 @@ class model():
             self.pred_estimated = self.pred_estimated.clip(min = 0, max = max_value)
             
         else:
-            X_test = mean_df(X_test[self.X_selected_features]).drop(columns = ["date_forecast"]).copy()
-            X_test = date_forecast_to_time(X_test)
+            X_test = mean_df(X_test[self.X_selected_features])
+            X_test = date_forecast_to_time(X_test).drop(columns = ['date_forecast'])
             X_test = scale_df(X_test, False)
             self.prediction = self.model.predict(X_test)
             self.prediction = self.prediction.clip(min = 0, max = max_value)
