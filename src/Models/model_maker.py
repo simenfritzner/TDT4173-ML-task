@@ -19,6 +19,7 @@ class model():
         X_observed_clean_mean = mean_df(X_observed_clean)
         
         X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
+        X_train = date_forcast_to_time(X_train)
         X_train, y = resize_training_data(X_train,y)
         self.train_test_data_split(X_train, y)
         self.scale_data()
