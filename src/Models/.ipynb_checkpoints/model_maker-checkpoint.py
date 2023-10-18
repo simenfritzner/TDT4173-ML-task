@@ -19,12 +19,14 @@ class model():
         X_observed_clean_mean = mean_df(X_observed_clean)
         
         X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
+        X_train = date_forecast_to_time(X_train)
         X_train, y = resize_training_data(X_train,y)
+        self.X_columns = X_train.columns
         self.train_test_data_split(X_train, y)
         self.scale_data()
         
     def train_test_data_split(self, X, y):
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size = 0.1, shuffle = False)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size = 0.1, shuffle = True)
         
     def scale_data(self):
         self.X_train = scale_df(self.X_train, True)
@@ -38,13 +40,19 @@ class model():
             self.pred_estimated = self.pred_estimated.clip(min = 0, max = max_value)
             
         else:
-            X_test = mean_df(X_test[self.X_selected_features]).drop(columns = ["date_forecast"]).copy()
+            X_test = mean_df(X_test[self.X_selected_features])
+            X_test = date_forecast_to_time(X_test).drop(columns = ['date_forecast'])
             X_test = scale_df(X_test, False)
             self.prediction = self.model.predict(X_test)
             self.prediction = self.prediction.clip(min = 0, max = max_value)
             
     def mae(self):
         return mean_absolute_error(self.y_test["pv_measurement"], self.pred_estimated)
+    
+    def feature_importence_plot(self):
+        self.model.feature_importances_
+        plt.figure(figsize=(20,10))
+        plt.barh(self.X_columns, self.model.feature_importances_)
     
     def corr_plot(self):
         # Calculate correlation coefficient
