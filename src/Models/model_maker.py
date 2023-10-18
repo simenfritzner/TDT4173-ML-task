@@ -26,7 +26,7 @@ class model():
         self.scale_data()
         
     def train_test_data_split(self, X, y):
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size = 0.1, shuffle = True)
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size = 0.1, shuffle = True, random_state = 42)
         
     def scale_data(self):
         self.X_train = scale_df(self.X_train, True)
