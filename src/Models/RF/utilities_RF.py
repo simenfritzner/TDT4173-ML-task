@@ -8,6 +8,3 @@ class Random_Forest(model):
         self.pred_estimated = None
         self.prepare_data(X_observed, X_estimated, y, self.X_selected_features)
         
-    def fit(self):
-        self.model.fit(self.X_train, self.y_train["pv_measurement"])
-        
