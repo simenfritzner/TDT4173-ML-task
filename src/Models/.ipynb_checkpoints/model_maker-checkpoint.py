@@ -11,7 +11,7 @@ class model():
     def fit(self):
         self.model.fit(self.X_train, self.y_train["pv_measurement"])
     
-    def prepare_data(self, X_observed, X_estimated, y, X_selected_features):
+    def prepare_data(self, X_observed, X_estimated, y, X_selected_features, cross_validate):
         
         X_observed_clean = clean_df(X_observed, X_selected_features)
         X_estimated_clean = clean_df(X_estimated, X_selected_features)
@@ -21,6 +21,8 @@ class model():
         X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
         X_train = date_forecast_to_time(X_train)
         X_train, y = resize_training_data(X_train,y)
+        if cross_validate == True:
+            cross_validate(X_train, y_train)
         self.X_columns = X_train.columns
         self.train_test_data_split(X_train, y)
         #self.scale_data()
@@ -75,3 +77,10 @@ class model():
         plt.legend()
         plt.grid(True)
         plt.show()
+        
+    def cross_validate(self, X_train, y_train):
+        # Cross-validation
+        scores = cross_val_score(self.model, X_train, y_train["pv_measurement"], cv=5, scoring='neg_mean_absolute_error', n_jobs = -1)
+        scores = -scores  # Making scores positive for easier interpretation
+        self.cross_val_score_mean = scores.mean()
+        self.cross_val_score = scores
