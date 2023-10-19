@@ -8,6 +8,9 @@ class model():
     def __init__(self):
         pass
     
+    def fit(self):
+        self.model.fit(self.X_train, self.y_train["pv_measurement"])
+    
     def prepare_data(self, X_observed, X_estimated, y, X_selected_features):
         
         X_observed_clean = clean_df(X_observed, X_selected_features)
