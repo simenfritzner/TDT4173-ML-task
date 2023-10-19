@@ -90,7 +90,7 @@ def submission(filename, y_pred, path_to_src):
     submission = submission[['id']].merge(test[['id', 'prediction']], on='id', how='left')
     submission.to_csv(path_to_src + "/Data/CSV/" + filename, index=False)
 
-    def drop_repeating_sequences(df):
+def drop_repeating_sequences(df):
     indexes_to_drop = []
     prev_val = None
     consecutive_count = 0
