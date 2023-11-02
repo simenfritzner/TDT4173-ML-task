@@ -2,12 +2,8 @@ from model_maker import *
 from sklearn.linear_model import LinearRegression
       
 class Lin_reg(model):
-    def __init__(self, X_observed, X_estimated, y, X_selected_features, cross_validate = False):
+    def __init__(self, X_train, X_test, y_train):
         self.model = LinearRegression()
-        self.X_selected_features = X_selected_features
-        self.pred_estimated = None
-        self.prepare_data(X_observed, X_estimated, y, self.X_selected_features, cross_validate)
-        
-    def fit(self):
-        self.model.fit(self.X_train, self.y_train["pv_measurement"])
+        self.X_test = X_test
+        self.X_train, self.X_valid, self.y_train, self.y_valid = train_test_split(X_train, y_train, shuffle = True, random_state = 42)
         
