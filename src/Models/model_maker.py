@@ -3,6 +3,7 @@ from scipy.stats import pearsonr
 from sklearn.metrics import mean_absolute_error
 from sklearn.model_selection import train_test_split
 import matplotlib.pylab as plt
+from sklearn.base import clone
 
 class model():
     def __init__(self):
@@ -12,6 +13,7 @@ class model():
         self.model.fit(self.X_train, self.y_train["pv_measurement"])
     
     def prepare_data(self, X_observed, X_estimated, y, X_selected_features, cross_validate):
+        
         
         X_observed_clean = clean_df(X_observed, X_selected_features)
         X_estimated_clean = clean_df(X_estimated, X_selected_features)
@@ -26,6 +28,12 @@ class model():
         self.X_columns = X_train.columns
         self.train_test_data_split(X_train, y)
         #self.scale_data()
+        
+        if cross_validate:
+            self.cross_validate(X_train, y)
+            
+        self.X_columns = X_train.columns
+        self.train_test_data_split(X_train, y)
         
     def train_test_data_split(self, X, y):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size = 0.1, shuffle = True, random_state = 42)
@@ -84,3 +92,4 @@ class model():
         scores = -scores  # Making scores positive for easier interpretation
         self.cross_val_score_mean = scores.mean()
         self.cross_val_score = scores
+
