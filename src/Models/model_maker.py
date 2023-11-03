@@ -60,10 +60,19 @@ class model():
         return mean_absolute_error(self.y_test["pv_measurement"], self.pred_estimated)
     
     def feature_importence_plot(self):
+        list_of_feature_and_importance = {}
+        list_of_feature = []
         self.model.feature_importances_
         plt.figure(figsize=(20,10))
         plt.barh(self.X_columns, self.model.feature_importances_)
-    
+        for feature, importance in zip(self.X_columns, self.model.feature_importances_):
+            print(f"{feature}: {importance}")
+            if (importance >= 0.002):
+                list_of_feature_and_importance[feature] = importance
+                list_of_feature.append(feature)
+        print(list_of_feature_and_importance)
+        print(list_of_feature)
+                
     def corr_plot(self):
         # Calculate correlation coefficient
         corr, _ = pearsonr(self.y_test["pv_measurement"], self.pred_estimated)

@@ -21,7 +21,7 @@ def direct_rad_div_diffuse_rad(df):
     df.loc[condition, 'dif_dat_rad'] = df.loc[condition, 'direct_rad:W'] / df.loc[condition, 'diffuse_rad:W']
     return df
 
-def get_hyperparameters_for_rf(x_observed, x_estimated, y, selected_features )
+def get_hyperparameters_for_rf(x_observed, x_estimated, y, selected_features ):
     X_train = pd.concat([clean_df(x_observed, selected_features), clean_df(x_estimated, selected_features)])
     X_train, y_train = resize_training_data(X_train,y)
     # Define the parameter grid

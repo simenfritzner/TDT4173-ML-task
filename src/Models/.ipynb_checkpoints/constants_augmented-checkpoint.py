@@ -11,6 +11,18 @@ X_test_b = direct_rad_div_diffuse_rad(X_test_b)
 X_test_c = direct_rad_div_diffuse_rad(X_test_c)
 
 
+X_observed_a = agumenting_time(X_observed_a.copy())
+X_observed_b = agumenting_time(X_observed_b.copy())
+X_observed_c = agumenting_time(X_observed_c.copy())
+
+X_estimated_a = agumenting_time(X_estimated_a.copy())
+X_estimated_b = agumenting_time(X_estimated_b.copy())
+X_estimated_c = agumenting_time(X_estimated_c.copy())
+
+X_test_a = agumenting_time(X_test_a.copy())
+X_test_b = agumenting_time(X_test_b.copy())
+X_test_c = agumenting_time(X_test_c.copy())
+
 #WANT TO CHANGE THIS (NB with predictions form an estimator) 
 #!!!!
 #!!!!

@@ -11,17 +11,31 @@ X_test_b = direct_rad_div_diffuse_rad(X_test_b)
 X_test_c = direct_rad_div_diffuse_rad(X_test_c)
 
 
+X_observed_a = agumenting_time(X_observed_a.copy())
+X_observed_b = agumenting_time(X_observed_b.copy())
+X_observed_c = agumenting_time(X_observed_c.copy())
+
+X_estimated_a = agumenting_time(X_estimated_a.copy())
+X_estimated_b = agumenting_time(X_estimated_b.copy())
+X_estimated_c = agumenting_time(X_estimated_c.copy())
+
+X_test_a = agumenting_time(X_test_a.copy())
+X_test_b = agumenting_time(X_test_b.copy())
+X_test_c = agumenting_time(X_test_c.copy())
+
 #WANT TO CHANGE THIS (NB with predictions form an estimator) 
 #!!!!
 #!!!!
 #!!!!
 #!!!!
 #!!!!
+"""
 y_b = drop_repeating_sequences(y_b.copy())
 y_b = delete_ranges_of_zeros_and_interrupting_values(y_b.copy(),200,[0.8625])
 y_b = delete_ranges_of_zeros_and_interrupting_values(y_b.copy(),25,[0.8625])
 y_b = drop_long_sequences(y_b.copy(),25)
 y_c = delete_ranges_of_zeros_and_interrupting_values(y_c.copy(),5,[19.6,9.8])
+"""
 
 #but the rest is perfect:=0 
 

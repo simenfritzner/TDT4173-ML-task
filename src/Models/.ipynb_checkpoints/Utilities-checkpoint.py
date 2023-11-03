@@ -2,6 +2,9 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import RobustScaler
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import make_scorer, mean_absolute_error
+from sklearn.model_selection import GridSearchCV
 import numpy as np
 
 #scaler = StandardScaler()
@@ -9,6 +12,119 @@ import numpy as np
 scaler = RobustScaler()
 
 #gustav sitt
+def augment_y_c(df_y_c):
+    y_b_to_fit_1, y_c_to_predict_1= delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df_y_c,5,[19.6,9.8])
+    return y_b_to_fit_1, y_c_to_predict_1
+
+def augment_y_b(df_y_b):
+    y_b_to_fit, y_b_to_predict_1 = drop_repeating_sequences_and_return_y_with_droped_indixes(df_y_b)
+    y_b_to_fit_2, y_b_to_predict_2 = delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(y_b_to_fit.copy(),200,[0.8625])
+    y_b_to_fit_3, y_b_to_predict_3 = delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(y_b_to_fit_2.copy(),25,[0.8625])
+    y_b_to_fit_4, y_b_to_predict_4 = drop_long_sequences_and_return_y_with_dropped_indices(y_b_to_fit_3.copy(),25)
+    y_b_to_predict = pd.concat([y_b_to_predict_1, y_b_to_predict_2, y_b_to_predict_3, y_b_to_predict_4], axis=0)
+    return y_b_to_fit_4, y_b_to_predict
+
+def drop_repeating_sequences_and_return_y_with_droped_indixes(df):
+    indexes_to_drop = set()  # Change this to a set to avoid duplicates
+    prev_val = None
+    consecutive_count = 0
+    y_with_indexes_to_drop = df.copy()
+
+    for i, val in enumerate(df["pv_measurement"]):
+        if val != 0:
+            if val == prev_val:
+                consecutive_count += 1
+            else:
+                prev_val = val
+                consecutive_count = 0
+
+            if consecutive_count >= 1:
+                indexes_to_drop.add(i - consecutive_count)  # Add to set to ensure uniqueness
+                indexes_to_drop.add(i)  # Add to set to ensure uniqueness
+    
+    # Convert the set to a sorted list to use for indexing
+    indexes_to_drop = sorted(indexes_to_drop)
+    
+    # Create the DataFrame without the dropped indices
+    df_without_dropped = df.drop(indexes_to_drop)
+    
+    # Create the DataFrame with only the dropped indices
+    df_with_only_dropped = df.loc[indexes_to_drop]
+
+    return df_without_dropped, df_with_only_dropped
+
+
+def delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df, number_of_recurring_zeros, interrupting_values=[]):
+    count = 0
+    drop_indices = []
+
+    # Store the original DataFrame to reinsert NaN values later
+    original_df = df.copy()
+
+    # Get the indices of the NaN values
+    nan_indices = df[df['pv_measurement'].isna()].index.tolist()
+    if len(nan_indices) > 0:
+        print("penis")
+    # Drop the NaN values for processing zeros and interrupting values
+    df = df.dropna()
+
+    for index, row in df.iterrows():
+        if row["pv_measurement"] == 0 or row["pv_measurement"] in interrupting_values:
+            count += 1
+        else:
+            if count > number_of_recurring_zeros:
+                drop_indices.extend(df.index[index - count:index])
+            count = 0
+
+    if count > number_of_recurring_zeros:
+        drop_indices.extend(df.index[index - count + 1:index + 1])
+    
+      # Convert the set to a sorted list to use for indexing
+    indexes_to_drop = sorted(drop_indices)
+    
+    # Create the DataFrame without the dropped indices
+    df_without_dropped = df.drop(indexes_to_drop)
+    
+    # Combine drop_indices with nan_indices to get all indices to be dropped
+    all_drop_indices = sorted(set(drop_indices + nan_indices))
+
+    # Create the DataFrame with only the dropped indices
+    df_with_only_dropped = original_df.loc[all_drop_indices]
+    
+    return df_without_dropped, df_with_only_dropped  #, df_with_only_dropped (uncomment if needed)
+
+def drop_long_sequences_and_return_y_with_dropped_indices(df, x):
+    indexes_to_drop = []
+    zero_count = 0
+
+    for i, val in enumerate(df['pv_measurement']):
+        if val == 0:
+            zero_count += 1
+        else:
+            if zero_count >= x:
+                start_index = i - zero_count
+                end_index = i - 1  # inclusive
+                if start_index >= 0 and end_index < len(df):
+                    indexes_to_drop.extend(list(range(start_index, end_index + 1)))
+            zero_count = 0
+
+    # In case the sequence ends with zeros, this will handle it
+    if zero_count >= x:
+        start_index = len(df) - zero_count
+        end_index = len(df) - 1
+        if start_index >= 0 and end_index < len(df):
+            indexes_to_drop.extend(list(range(start_index, end_index + 1)))
+
+    # Create a dataframe with only the dropped rows
+    df_with_only_dropped = df.loc[df.index[indexes_to_drop]].copy()
+
+    # Drop the rows from the original dataframe
+    df_dropped = df.drop(df.index[indexes_to_drop])
+    
+    return df_dropped, df_with_only_dropped
+
+
+
 def agumenting_time(df):
     df["new_time"] = pd.to_datetime(df['date_forecast'])
     df['hour'] = df['new_time'].dt.hour
@@ -27,7 +143,7 @@ def direct_rad_div_diffuse_rad(df):
     df.loc[condition, 'dif_dat_rad'] = df.loc[condition, 'direct_rad:W'] / df.loc[condition, 'diffuse_rad:W']
     return df
 
-def get_hyperparameters_for_rf(x_observed, x_estimated, y, selected_features ):
+def get_hyperparameters_for_rf(x_observed, x_estimated, y, selected_features):
     X_train = pd.concat([clean_df(x_observed, selected_features), clean_df(x_estimated, selected_features)])
     X_train, y_train = resize_training_data(X_train,y)
     # Define the parameter grid
@@ -157,6 +273,9 @@ def drop_repeating_sequences(df):
                 indexes_to_drop.extend([i - consecutive_count, i])
 
     return df.drop(indexes_to_drop)
+
+
+
 
 def delete_ranges_of_zeros_and_interrupting_values(df, number_of_recurring_zeros, interrupting_values = []):
     count = 0
