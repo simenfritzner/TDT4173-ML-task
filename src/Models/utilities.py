@@ -13,12 +13,13 @@ def agumenting_time(df):
     df["new_time"] = pd.to_datetime(df['date_forecast'])
     df['hour'] = df['new_time'].dt.hour
     df['minute'] = df['new_time'].dt.minute
-    df["day"]  = df['new_time'].dt.day
+    #df["day"]  = df['new_time'].dt.day
     df["month"]  = df['new_time'].dt.month
     df['time_decimal'] = df['hour'] + df['minute'] / 60.0
     phase_adjustment = (np.pi/2) - 11 * (2 * np.pi / 24)
     df['hour_sin'] = np.sin(df['time_decimal'] * (2. * np.pi / 24) + phase_adjustment)
     df['hour_cos'] = np.cos(df['time_decimal'] * (2. * np.pi / 24) + phase_adjustment)
+    df = df.drop(columns = ["new_time"])
     return df
 
 def direct_rad_div_diffuse_rad(df):
@@ -212,12 +213,37 @@ def prepare_data_rf_a(X_observed, X_estimated, y, selected_features):
         X_observed_clean_mean = mean_df(X_observed_clean)
         
         X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
-        X_train = date_forecast_to_time(X_train)
+        X_train = direct_rad_div_diffuse_rad(X_train)
+        X_train = agumenting_time(X_train)
         X_train, y = resize_training_data(X_train,y)
         return X_train, y
     
 def prepare_testdata_rf_a(X_test, selected_features):
     X_test = clean_df(X_test, selected_features)
     X_test = mean_df(X_test)
-    X_test = date_forecast_to_time(X_test).drop(columns = ["date_forecast"])
+    X_test = direct_rad_div_diffuse_rad(X_test)
+    X_test = agumenting_time(X_test)
+    X_test = X_test.drop(columns = ["date_forecast"])
+    return X_test
+
+def prepare_data_rf_c(X_observed, X_estimated, y, selected_features):
+        
+        
+        X_observed_clean = clean_df(X_observed, selected_features)
+        X_estimated_clean = clean_df(X_estimated, selected_features)
+        X_estimated_clean_mean = mean_df(X_estimated_clean)
+        X_observed_clean_mean = mean_df(X_observed_clean)
+        
+        X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
+        #X_train = direct_rad_div_diffuse_rad(X_train)
+        X_train = date_forecast_to_time(X_train)
+        X_train, y = resize_training_data(X_train,y)
+        return X_train, y
+    
+def prepare_testdata_rf_c(X_test, selected_features):
+    X_test = clean_df(X_test, selected_features)
+    X_test = mean_df(X_test)
+    #X_test = direct_rad_div_diffuse_rad(X_test)
+    X_test = date_forecast_to_time(X_test)
+    X_test = X_test.drop(columns = ["date_forecast"])
     return X_test
