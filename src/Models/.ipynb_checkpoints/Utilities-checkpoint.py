@@ -328,6 +328,12 @@ def prepare_X(X_observed, X_estimated, selected_features, wanted_months):
     X_train = add_features(X_train)
     return X_train
 
+def prepare_testdata_rf_a(X_test, selected_features):
+    X_test = clean_df(X_test, selected_features)
+    X_test = mean_df(X_test)
+    X_test = add_features(X_test)
+    return X_test
+
 def add_features(X_train):
     X_train = direct_rad_div_diffuse_rad(X_train)
     X_train = agumenting_time(X_train)
