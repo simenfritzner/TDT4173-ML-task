@@ -332,6 +332,7 @@ def prepare_testdata_rf_a(X_test, selected_features):
     X_test = clean_df(X_test, selected_features)
     X_test = mean_df(X_test)
     X_test = add_features(X_test)
+    X_test = X_test.drop(columns = ["date_forecast"])
     return X_test
 
 def add_features(X_train):
