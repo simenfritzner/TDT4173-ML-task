@@ -1,4 +1,5 @@
 import pandas as pd
+from utilities import *
 #Loading the y-paramter from file, might be changed to y_a etc.
 y_a = pd.read_parquet('../../Data/Data_and_task/A/train_targets.parquet')
 y_b = pd.read_parquet('../../Data/Data_and_task/B/train_targets.parquet')
@@ -21,3 +22,10 @@ X_test_a = pd.read_parquet('../../Data/Data_and_task/A/X_test_estimated.parquet'
 X_test_b = pd.read_parquet('../../Data/Data_and_task/B/X_test_estimated.parquet')
 X_test_c = pd.read_parquet('../../Data/Data_and_task/C/X_test_estimated.parquet')
 
+<<<<<<< HEAD
+=======
+y_b = drop_repeating_sequences(y_b.copy())
+y_b = delete_ranges_of_zeros_and_interrupting_values(y_b.copy(),200,[0.8625])
+y_b = delete_ranges_of_zeros_and_interrupting_values(y_b.copy(),25,[0.8625])
+y_b = drop_long_sequences(y_b.copy(),25)
+>>>>>>> 3f02949931c6c7d7a7111faea1243a3d4ca79b11

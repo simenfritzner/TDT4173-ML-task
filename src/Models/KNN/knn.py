@@ -2,9 +2,8 @@ from model_maker import *
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.model_selection import GridSearchCV
       
-class knn(model):
-    def __init__(self,hyperparameters, X_observed, X_estimated, y, X_selected_features, cross_validate = False):
+class KNN_model(model):
+    def __init__(self,hyperparameters, X_train, X_test, y_train):
         self.model = KNeighborsRegressor(**hyperparameters)
-        self.X_selected_features = X_selected_features
-        self.pred_estimated = None
-        self.prepare_data(X_observed, X_estimated, y, self.X_selected_features, cross_validate)
+        self.X_test = X_test
+        self.X_train, self.X_valid, self.y_train, self.y_valid = train_test_split(X_train, y_train, shuffle = True, random_state = 42)
