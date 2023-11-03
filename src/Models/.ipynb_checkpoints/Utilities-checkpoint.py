@@ -5,8 +5,118 @@ from sklearn.preprocessing import RobustScaler
 import numpy as np
 
 #scaler = StandardScaler()
-#scaler = MinMaxScaler()
-scaler = RobustScaler()
+scaler = MinMaxScaler()
+#scaler = RobustScaler()
+def augment_y_c(df_y_c):
+    y_b_to_fit_1, y_c_to_predict_1= delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df_y_c,5,[19.6,9.8])
+    return y_b_to_fit_1, y_c_to_predict_1
+
+def augment_y_b(df_y_b):
+    y_b_to_fit, y_b_to_predict_1 = drop_repeating_sequences_and_return_y_with_droped_indixes(df_y_b)
+    y_b_to_fit_2, y_b_to_predict_2 = delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(y_b_to_fit.copy(),200,[0.8625])
+    y_b_to_fit_3, y_b_to_predict_3 = delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(y_b_to_fit_2.copy(),25,[0.8625])
+    y_b_to_fit_4, y_b_to_predict_4 = drop_long_sequences_and_return_y_with_dropped_indices(y_b_to_fit_3.copy(),25)
+    y_b_to_predict = pd.concat([y_b_to_predict_1, y_b_to_predict_2, y_b_to_predict_3, y_b_to_predict_4], axis=0)
+    return y_b_to_fit_4, y_b_to_predict
+
+def drop_repeating_sequences_and_return_y_with_droped_indixes(df):
+    indexes_to_drop = set()  # Change this to a set to avoid duplicates
+    prev_val = None
+    consecutive_count = 0
+    y_with_indexes_to_drop = df.copy()
+
+    for i, val in enumerate(df["pv_measurement"]):
+        if val != 0:
+            if val == prev_val:
+                consecutive_count += 1
+            else:
+                prev_val = val
+                consecutive_count = 0
+
+            if consecutive_count >= 1:
+                indexes_to_drop.add(i - consecutive_count)  # Add to set to ensure uniqueness
+                indexes_to_drop.add(i)  # Add to set to ensure uniqueness
+    
+    # Convert the set to a sorted list to use for indexing
+    indexes_to_drop = sorted(indexes_to_drop)
+    
+    # Create the DataFrame without the dropped indices
+    df_without_dropped = df.drop(indexes_to_drop)
+    
+    # Create the DataFrame with only the dropped indices
+    df_with_only_dropped = df.loc[indexes_to_drop]
+
+    return df_without_dropped, df_with_only_dropped
+
+
+def delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df, number_of_recurring_zeros, interrupting_values=[]):
+    count = 0
+    drop_indices = []
+
+    # Store the original DataFrame to reinsert NaN values later
+    original_df = df.copy()
+
+    # Get the indices of the NaN values
+    nan_indices = df[df['pv_measurement'].isna()].index.tolist()
+    if len(nan_indices) > 0:
+        print("penis")
+    # Drop the NaN values for processing zeros and interrupting values
+    df = df.dropna()
+
+    for index, row in df.iterrows():
+        if row["pv_measurement"] == 0 or row["pv_measurement"] in interrupting_values:
+            count += 1
+        else:
+            if count > number_of_recurring_zeros:
+                drop_indices.extend(df.index[index - count:index])
+            count = 0
+
+    if count > number_of_recurring_zeros:
+        drop_indices.extend(df.index[index - count + 1:index + 1])
+    
+      # Convert the set to a sorted list to use for indexing
+    indexes_to_drop = sorted(drop_indices)
+    
+    # Create the DataFrame without the dropped indices
+    df_without_dropped = df.drop(indexes_to_drop)
+    
+    # Combine drop_indices with nan_indices to get all indices to be dropped
+    all_drop_indices = sorted(set(drop_indices + nan_indices))
+
+    # Create the DataFrame with only the dropped indices
+    df_with_only_dropped = original_df.loc[all_drop_indices]
+    
+    return df_without_dropped, df_with_only_dropped  #, df_with_only_dropped (uncomment if needed)
+
+def drop_long_sequences_and_return_y_with_dropped_indices(df, x):
+    indexes_to_drop = []
+    zero_count = 0
+
+    for i, val in enumerate(df['pv_measurement']):
+        if val == 0:
+            zero_count += 1
+        else:
+            if zero_count >= x:
+                start_index = i - zero_count
+                end_index = i - 1  # inclusive
+                if start_index >= 0 and end_index < len(df):
+                    indexes_to_drop.extend(list(range(start_index, end_index + 1)))
+            zero_count = 0
+
+    # In case the sequence ends with zeros, this will handle it
+    if zero_count >= x:
+        start_index = len(df) - zero_count
+        end_index = len(df) - 1
+        if start_index >= 0 and end_index < len(df):
+            indexes_to_drop.extend(list(range(start_index, end_index + 1)))
+
+    # Create a dataframe with only the dropped rows
+    df_with_only_dropped = df.loc[df.index[indexes_to_drop]].copy()
+
+    # Drop the rows from the original dataframe
+    df_dropped = df.drop(df.index[indexes_to_drop])
+    
+    return df_dropped, df_with_only_dropped
 
 #gustav sitt
 def agumenting_time(df):
@@ -24,8 +134,8 @@ def agumenting_time(df):
 
 def direct_rad_div_diffuse_rad(df):
     df['dif_dat_rad'] = 0.0
-    condition = df['diffuse_rad:W'] != 0
-    df.loc[condition, 'dif_dat_rad'] = df.loc[condition, 'direct_rad:W'] / df.loc[condition, 'diffuse_rad:W']
+    condition = df['diffuse_rad_1h:J'] != 0
+    df.loc[condition, 'dif_dat_rad'] = df.loc[condition, 'direct_rad_1h:J'] / df.loc[condition, 'diffuse_rad_1h:J']
     return df
 
 def get_hyperparameters_for_rf(x_observed, x_estimated, y, selected_features ):
@@ -204,46 +314,163 @@ def drop_long_sequences(df, x):
 
     return df.drop(df.index[indexes_to_drop])
 
-def prepare_data_rf_a(X_observed, X_estimated, y, selected_features):
-        
-        
-        X_observed_clean = clean_df(X_observed, selected_features)
-        X_estimated_clean = clean_df(X_estimated, selected_features)
-        X_estimated_clean_mean = mean_df(X_estimated_clean)
-        X_observed_clean_mean = mean_df(X_observed_clean)
-        
-        X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
-        X_train = direct_rad_div_diffuse_rad(X_train)
-        X_train = agumenting_time(X_train)
-        X_train, y = resize_training_data(X_train,y)
-        return X_train, y
-    
-def prepare_testdata_rf_a(X_test, selected_features):
-    X_test = clean_df(X_test, selected_features)
-    X_test = mean_df(X_test)
-    X_test = direct_rad_div_diffuse_rad(X_test)
-    X_test = agumenting_time(X_test)
-    X_test = X_test.drop(columns = ["date_forecast"])
-    return X_test
+def clean_mean_combine(X_observed, X_estimated, selected_features):
+    X_observed_clean = clean_df(X_observed, selected_features)
+    X_estimated_clean = clean_df(X_estimated, selected_features)
+    X_estimated_clean_mean = mean_df(X_estimated_clean)
+    X_observed_clean_mean = mean_df(X_observed_clean)
+    X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
+    return X_train
 
-def prepare_data_rf_c(X_observed, X_estimated, y, selected_features):
-        
-        
-        X_observed_clean = clean_df(X_observed, selected_features)
-        X_estimated_clean = clean_df(X_estimated, selected_features)
-        X_estimated_clean_mean = mean_df(X_estimated_clean)
-        X_observed_clean_mean = mean_df(X_observed_clean)
-        
-        X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
-        #X_train = direct_rad_div_diffuse_rad(X_train)
-        X_train = date_forecast_to_time(X_train)
-        X_train, y = resize_training_data(X_train,y)
-        return X_train, y
+def prepare_X(X_observed, X_estimated, selected_features, wanted_months):
+    X_observed = subset_months(X_observed.copy(), wanted_months)
+    X_train = clean_mean_combine(X_observed, X_estimated, selected_features)
+    X_train = add_features(X_train)
+    return X_train
+
+def add_features(X_train):
+    X_train = direct_rad_div_diffuse_rad(X_train)
+    X_train = agumenting_time(X_train)
+    return X_train
+
+def subset_months(X_observed, wanted_months):
+    X_observed["month"]  = X_observed['date_forecast'].dt.month
+    X_observed_subset = X_observed[X_observed["month"].isin(wanted_months)].drop(columns = ["month"])
+    return X_observed_subset
     
-def prepare_testdata_rf_c(X_test, selected_features):
-    X_test = clean_df(X_test, selected_features)
-    X_test = mean_df(X_test)
-    #X_test = direct_rad_div_diffuse_rad(X_test)
-    X_test = date_forecast_to_time(X_test)
-    X_test = X_test.drop(columns = ["date_forecast"])
-    return X_test
+
+def subset_summer_a(X_observed_a):
+    #Subset for April in X_observed_a
+    April_subset_1_X_observed_a = X_observed_a.iloc[29098-2:31977-1]  # Note that Python is 0-indexed and the ending index is exclusive
+    April_subset_2_X_observed_a = X_observed_a.iloc[64138-2:67017-1]
+    April_subset_3_X_observed_a = X_observed_a.iloc[99178-2:102057-1]
+
+    # Concatenate subsets for April
+    April_subset_X_observed_a = pd.concat([April_subset_1_X_observed_a, April_subset_2_X_observed_a, April_subset_3_X_observed_a])
+    #April_subset_X_observed_a = direct_rad_div_diffuse_rad(April_subset_X_observed_a)
+
+    #Subset for Mai in X_observed_a for Mai
+    Mai_subset_1_X_observed_a = X_observed_a.iloc[31978-2:34953-1]  
+    Mai_subset_2_X_observed_a = X_observed_a.iloc[67018-2:69993-1]  
+    Mai_subset_3_X_observed_a = X_observed_a.iloc[102058-2:105033-1]  
+
+    # Concatenate subsets for Mai
+    Mai_subset_X_observed_a = pd.concat([Mai_subset_1_X_observed_a, Mai_subset_2_X_observed_a, Mai_subset_3_X_observed_a])
+    #Mai_subset_X_observed_a = direct_rad_div_diffuse_rad(Mai_subset_X_observed_a)
+
+    #Subset for Juni in X_observed_a 
+    Juni_subset_1_X_observed_a = X_observed_a.iloc[2-2:2697-1]  
+    Juni_subset_2_X_observed_a = X_observed_a.iloc[34954-2:37833-1]  
+    Juni_subset_3_X_observed_a = X_observed_a.iloc[69994-2:72873-1] 
+    Juni_subset_4_X_observed_a = X_observed_a.iloc[105034-2:107923-1] 
+
+    # Concatenate subsets for Juni
+    Juni_subset_X_observed_a = pd.concat([Juni_subset_1_X_observed_a, Juni_subset_2_X_observed_a, Juni_subset_3_X_observed_a, Juni_subset_4_X_observed_a])
+    #Juni_subset_X_observed_a = direct_rad_div_diffuse_rad(Juni_subset_X_observed_a)
+
+    #Subset for April in X_observed_a 
+    July_subset_1_X_observed_a = X_observed_a.iloc[2698-2:5673-1]  
+    July_subset_2_X_observed_a = X_observed_a.iloc[37834-2:40809-1]  
+    July_subset_3_X_observed_a = X_observed_a.iloc[72874-2:75844-1]  
+    July_subset_4_X_observed_a = X_observed_a.iloc[107914-2:110889-1]  
+
+    # Concatenate subsets for July
+    July_subset_X_observed_a = pd.concat([July_subset_1_X_observed_a, July_subset_2_X_observed_a, July_subset_3_X_observed_a, July_subset_4_X_observed_a])
+    #July_subset_X_observed_a = direct_rad_div_diffuse_rad(July_subset_X_observed_a)
+
+
+    # Concatenate subsets for all dates 
+    subset_X_observed_a = pd.concat([April_subset_X_observed_a,Mai_subset_X_observed_a, Juni_subset_X_observed_a, July_subset_X_observed_a])
+    return subset_X_observed_a
+
+    
+def subset_summer_b(X_observed_b):
+    #Subset for April in X_observed_b
+    April_subset_1_X_observed_b = X_observed_b.iloc[8642-2:11521-1]  # Note that Python is 0-indexed and the ending index is exclusive
+    April_subset_2_X_observed_b = X_observed_b.iloc[43778-2:46657-1]
+    April_subset_3_X_observed_b = X_observed_b.iloc[78818-2:81697-1]
+    April_subset_4_X_observed_b = X_observed_b.iloc[113858-2:116737-1]
+
+    # Concatenate subsets for April
+    April_subset_X_observed_b = pd.concat([April_subset_1_X_observed_b, April_subset_2_X_observed_b, April_subset_3_X_observed_b,April_subset_4_X_observed_b ])
+    April_subset_X_observed_b = direct_rad_div_diffuse_rad(April_subset_X_observed_b)
+
+    #Subset for Mai in X_observed_b for Mai
+    Mai_subset_1_X_observed_b = X_observed_b.iloc[11522-2:14497-1]  
+    Mai_subset_2_X_observed_b = X_observed_b.iloc[46658-2:49633-1]  
+    Mai_subset_3_X_observed_b = X_observed_b.iloc[81698-2:84673-1]  
+    Mai_subset_4_X_observed_b = X_observed_b.iloc[116738-2:]   #to 116930
+
+    # Concatenate subsets for Mai
+    Mai_subset_X_observed_b = pd.concat([Mai_subset_1_X_observed_b, Mai_subset_2_X_observed_b, Mai_subset_3_X_observed_b, Mai_subset_4_X_observed_b])
+    Mai_subset_X_observed_b = direct_rad_div_diffuse_rad(Mai_subset_X_observed_b)
+
+    #Subset for Juni in X_observed_a 
+    Juni_subset_1_X_observed_b = X_observed_b.iloc[14498-2:17377-1]  
+    Juni_subset_2_X_observed_b = X_observed_b.iloc[49634-2:52513-1]  
+    Juni_subset_3_X_observed_b = X_observed_b.iloc[84674-2:87553-1] 
+
+    # Concatenate subsets for Juni
+    Juni_subset_X_observed_b = pd.concat([Juni_subset_1_X_observed_b, Juni_subset_2_X_observed_b, Juni_subset_3_X_observed_b])
+    Juni_subset_X_observed_b = direct_rad_div_diffuse_rad(Juni_subset_X_observed_b)
+
+    #Subset for April in X_observed_a 
+    July_subset_1_X_observed_b = X_observed_b.iloc[17378-2:20353-1]  
+    July_subset_2_X_observed_b = X_observed_b.iloc[52514-2:55489-1]  
+    July_subset_3_X_observed_b = X_observed_b.iloc[87554-2:90529-1]  
+
+    # Concatenate subsets for July
+    July_subset_X_observed_b = pd.concat([July_subset_1_X_observed_b, July_subset_2_X_observed_b, July_subset_3_X_observed_b])
+    July_subset_X_observed_b = direct_rad_div_diffuse_rad(July_subset_X_observed_b)
+
+
+    # Concatenate subsets for all dates 
+    subset_X_observed_b = pd.concat([April_subset_X_observed_b,Mai_subset_X_observed_b, Juni_subset_X_observed_b, July_subset_X_observed_b])
+    return subset_X_observed_b
+    
+def subset_summer_c(X_observed_c):
+    #Subset for April in X_observed_c
+    April_subset_1_X_observed_c = X_observed_c.iloc[8642-2:11521-1]  # Note that Python is 0-indexed and the ending index is exclusive
+    April_subset_2_X_observed_c = X_observed_c.iloc[43778-2:46657-1]
+    April_subset_3_X_observed_c = X_observed_c.iloc[78818-2:81697-1]
+    April_subset_4_X_observed_c = X_observed_c.iloc[113858-2:116737-1]
+
+    # Concatenate subsets for April
+    April_subset_X_observed_c = pd.concat([April_subset_1_X_observed_c, April_subset_2_X_observed_c, April_subset_3_X_observed_c, April_subset_4_X_observed_c])
+    April_subset_X_observed_c = direct_rad_div_diffuse_rad(April_subset_X_observed_c)
+
+
+    #Subset for Mai in X_observed_a for Mai
+    Mai_subset_1_X_observed_c = X_observed_c.iloc[11522-2:14497-1]  
+    Mai_subset_2_X_observed_c = X_observed_c.iloc[46658-2:49633-1]  
+    Mai_subset_3_X_observed_c = X_observed_c.iloc[81698-2:84673-1]  
+    Mai_subset_4_X_observed_c = X_observed_c.iloc[116738-2:] 
+
+    # Concatenate subsets for Mai
+    Mai_subset_X_observed_c = pd.concat([Mai_subset_1_X_observed_c, Mai_subset_2_X_observed_c, Mai_subset_3_X_observed_c, Mai_subset_4_X_observed_c])
+    Mai_subset_X_observed_c = direct_rad_div_diffuse_rad(Mai_subset_X_observed_c)
+
+
+    #Subset for Juni in X_observed_a 
+    Juni_subset_1_X_observed_c = X_observed_c.iloc[14498-2:17377-1]  
+    Juni_subset_2_X_observed_c = X_observed_c.iloc[49634-2:52513-1]  
+    Juni_subset_3_X_observed_c = X_observed_c.iloc[84674-2:87553-1] 
+
+    # Concatenate subsets for Juni
+    Juni_subset_X_observed_c = pd.concat([Juni_subset_1_X_observed_c, Juni_subset_2_X_observed_c, Juni_subset_3_X_observed_c])
+    Juni_subset_X_observed_c = direct_rad_div_diffuse_rad(Juni_subset_X_observed_c)
+
+
+    #Subset for April in X_observed_a 
+    July_subset_1_X_observed_c = X_observed_c.iloc[17378-2:20353-1]  
+    July_subset_2_X_observed_c = X_observed_c.iloc[52514-2:55489-1]  
+    July_subset_3_X_observed_c = X_observed_c.iloc[87554-2:90529-1]  
+
+    # Concatenate subsets for July
+    July_subset_X_observed_c = pd.concat([July_subset_1_X_observed_c, July_subset_2_X_observed_c, July_subset_3_X_observed_c])
+    July_subset_X_observed_c = direct_rad_div_diffuse_rad(July_subset_X_observed_c)
+
+
+    # Concatenate subsets for all dates 
+    subset_X_observed_c = pd.concat([April_subset_X_observed_c, Mai_subset_X_observed_c, Juni_subset_X_observed_c, July_subset_X_observed_c])
+    return subset_X_observed_c
