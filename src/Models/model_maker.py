@@ -13,7 +13,7 @@ class model():
     
     def fit(self):
         self.model.fit(self.X_train, self.y_train["pv_measurement"])
-        
+       
     def pred(self):
         #max_value = self.y_train["pv_measurement"].max()
         self.prediction = self.model.predict(self.X_test)
