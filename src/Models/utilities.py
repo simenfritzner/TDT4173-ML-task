@@ -134,8 +134,8 @@ def agumenting_time(df):
 
 def direct_rad_div_diffuse_rad(df):
     df['dif_dat_rad'] = 0.0
-    condition = df['diffuse_rad_1h:J'] != 0
-    df.loc[condition, 'dif_dat_rad'] = df.loc[condition, 'direct_rad_1h:J'] / df.loc[condition, 'diffuse_rad_1h:J']
+    condition = df['diffuse_rad:W'] != 0
+    df.loc[condition, 'dif_dat_rad'] = df.loc[condition, 'direct_rad:W'] / df.loc[condition, 'diffuse_rad:W']
     return df
 
 def get_hyperparameters_for_rf(x_observed, x_estimated, y, selected_features ):
@@ -225,11 +225,11 @@ def mean_df(df):
     # Step 1: Keeping every 4th row in the date column
     date_column = df_copy['date_forecast'].iloc[::4]
     
-    """#Made it such that all the intresting columns having data for 1 hour average back in time is saved such for the last hour. Ex diffuse_rad_1h:j cl. 23:00 is used for the weather prediction 22:00
-    selected_col = ['diffuse_rad_1h:J', 'direct_rad_1h:J']
+    #Made it such that all the intresting columns having data for 1 hour average back in time is saved such for the last hour. Ex diffuse_rad_1h:j cl. 23:00 is used for the weather prediction 22:00
+    selected_col = ['diffuse_rad_1h:J', 'direct_rad_1h:J', 'clear_sky_energy_1h:J']
     selected_values = df_copy[selected_col].iloc[4::4].reset_index(drop=True)
     last_row = pd.DataFrame(df_copy[selected_col].iloc[-1]).T.reset_index(drop=True)
-    selected_values = pd.concat([selected_values, last_row], ignore_index=True)"""
+    selected_values = pd.concat([selected_values, last_row], ignore_index=True)
     
     # Step 2: Creating a grouping key
     grouping_key = np.floor(np.arange(len(df_copy)) / 4)
@@ -239,7 +239,7 @@ def mean_df(df):
     # Step 4: Reset index and merge the date column
     averaged_data.reset_index(drop=True, inplace=True)
     averaged_data['date_forecast'] = date_column.values
-    #averaged_data[selected_col] = selected_values.values
+    averaged_data[selected_col] = selected_values.values
     return averaged_data
 
 #Saves the predictions in proper format, y_pred needs to contain predicitions for all 3 locatoins
@@ -325,159 +325,20 @@ def clean_mean_combine(X_observed, X_estimated, selected_features):
 def prepare_X(X_observed, X_estimated, selected_features, wanted_months):
     X_observed = subset_months(X_observed.copy(), wanted_months)
     X_train = clean_mean_combine(X_observed, X_estimated, selected_features)
-    X_train = add_features(X_train)
     return X_train
 
 def prepare_testdata_rf_a(X_test, selected_features):
     X_test = clean_df(X_test, selected_features)
     X_test = mean_df(X_test)
-    X_test = add_features(X_test)
     X_test = X_test.drop(columns = ["date_forecast"])
     return X_test
 
-def add_features(X_train):
-    X_train = direct_rad_div_diffuse_rad(X_train)
-    X_train = agumenting_time(X_train)
-    return X_train
+def add_all_features(df):
+    df = direct_rad_div_diffuse_rad(df)
+    df = agumenting_time(df)
+    return df
 
-def subset_months(X_observed, wanted_months):
-    X_observed["month"]  = X_observed['date_forecast'].dt.month
-    X_observed_subset = X_observed[X_observed["month"].isin(wanted_months)].drop(columns = ["month"])
-    return X_observed_subset
-    
-
-def subset_summer_a(X_observed_a):
-    #Subset for April in X_observed_a
-    April_subset_1_X_observed_a = X_observed_a.iloc[29098-2:31977-1]  # Note that Python is 0-indexed and the ending index is exclusive
-    April_subset_2_X_observed_a = X_observed_a.iloc[64138-2:67017-1]
-    April_subset_3_X_observed_a = X_observed_a.iloc[99178-2:102057-1]
-
-    # Concatenate subsets for April
-    April_subset_X_observed_a = pd.concat([April_subset_1_X_observed_a, April_subset_2_X_observed_a, April_subset_3_X_observed_a])
-    #April_subset_X_observed_a = direct_rad_div_diffuse_rad(April_subset_X_observed_a)
-
-    #Subset for Mai in X_observed_a for Mai
-    Mai_subset_1_X_observed_a = X_observed_a.iloc[31978-2:34953-1]  
-    Mai_subset_2_X_observed_a = X_observed_a.iloc[67018-2:69993-1]  
-    Mai_subset_3_X_observed_a = X_observed_a.iloc[102058-2:105033-1]  
-
-    # Concatenate subsets for Mai
-    Mai_subset_X_observed_a = pd.concat([Mai_subset_1_X_observed_a, Mai_subset_2_X_observed_a, Mai_subset_3_X_observed_a])
-    #Mai_subset_X_observed_a = direct_rad_div_diffuse_rad(Mai_subset_X_observed_a)
-
-    #Subset for Juni in X_observed_a 
-    Juni_subset_1_X_observed_a = X_observed_a.iloc[2-2:2697-1]  
-    Juni_subset_2_X_observed_a = X_observed_a.iloc[34954-2:37833-1]  
-    Juni_subset_3_X_observed_a = X_observed_a.iloc[69994-2:72873-1] 
-    Juni_subset_4_X_observed_a = X_observed_a.iloc[105034-2:107923-1] 
-
-    # Concatenate subsets for Juni
-    Juni_subset_X_observed_a = pd.concat([Juni_subset_1_X_observed_a, Juni_subset_2_X_observed_a, Juni_subset_3_X_observed_a, Juni_subset_4_X_observed_a])
-    #Juni_subset_X_observed_a = direct_rad_div_diffuse_rad(Juni_subset_X_observed_a)
-
-    #Subset for April in X_observed_a 
-    July_subset_1_X_observed_a = X_observed_a.iloc[2698-2:5673-1]  
-    July_subset_2_X_observed_a = X_observed_a.iloc[37834-2:40809-1]  
-    July_subset_3_X_observed_a = X_observed_a.iloc[72874-2:75844-1]  
-    July_subset_4_X_observed_a = X_observed_a.iloc[107914-2:110889-1]  
-
-    # Concatenate subsets for July
-    July_subset_X_observed_a = pd.concat([July_subset_1_X_observed_a, July_subset_2_X_observed_a, July_subset_3_X_observed_a, July_subset_4_X_observed_a])
-    #July_subset_X_observed_a = direct_rad_div_diffuse_rad(July_subset_X_observed_a)
-
-
-    # Concatenate subsets for all dates 
-    subset_X_observed_a = pd.concat([April_subset_X_observed_a,Mai_subset_X_observed_a, Juni_subset_X_observed_a, July_subset_X_observed_a])
-    return subset_X_observed_a
-
-    
-def subset_summer_b(X_observed_b):
-    #Subset for April in X_observed_b
-    April_subset_1_X_observed_b = X_observed_b.iloc[8642-2:11521-1]  # Note that Python is 0-indexed and the ending index is exclusive
-    April_subset_2_X_observed_b = X_observed_b.iloc[43778-2:46657-1]
-    April_subset_3_X_observed_b = X_observed_b.iloc[78818-2:81697-1]
-    April_subset_4_X_observed_b = X_observed_b.iloc[113858-2:116737-1]
-
-    # Concatenate subsets for April
-    April_subset_X_observed_b = pd.concat([April_subset_1_X_observed_b, April_subset_2_X_observed_b, April_subset_3_X_observed_b,April_subset_4_X_observed_b ])
-    April_subset_X_observed_b = direct_rad_div_diffuse_rad(April_subset_X_observed_b)
-
-    #Subset for Mai in X_observed_b for Mai
-    Mai_subset_1_X_observed_b = X_observed_b.iloc[11522-2:14497-1]  
-    Mai_subset_2_X_observed_b = X_observed_b.iloc[46658-2:49633-1]  
-    Mai_subset_3_X_observed_b = X_observed_b.iloc[81698-2:84673-1]  
-    Mai_subset_4_X_observed_b = X_observed_b.iloc[116738-2:]   #to 116930
-
-    # Concatenate subsets for Mai
-    Mai_subset_X_observed_b = pd.concat([Mai_subset_1_X_observed_b, Mai_subset_2_X_observed_b, Mai_subset_3_X_observed_b, Mai_subset_4_X_observed_b])
-    Mai_subset_X_observed_b = direct_rad_div_diffuse_rad(Mai_subset_X_observed_b)
-
-    #Subset for Juni in X_observed_a 
-    Juni_subset_1_X_observed_b = X_observed_b.iloc[14498-2:17377-1]  
-    Juni_subset_2_X_observed_b = X_observed_b.iloc[49634-2:52513-1]  
-    Juni_subset_3_X_observed_b = X_observed_b.iloc[84674-2:87553-1] 
-
-    # Concatenate subsets for Juni
-    Juni_subset_X_observed_b = pd.concat([Juni_subset_1_X_observed_b, Juni_subset_2_X_observed_b, Juni_subset_3_X_observed_b])
-    Juni_subset_X_observed_b = direct_rad_div_diffuse_rad(Juni_subset_X_observed_b)
-
-    #Subset for April in X_observed_a 
-    July_subset_1_X_observed_b = X_observed_b.iloc[17378-2:20353-1]  
-    July_subset_2_X_observed_b = X_observed_b.iloc[52514-2:55489-1]  
-    July_subset_3_X_observed_b = X_observed_b.iloc[87554-2:90529-1]  
-
-    # Concatenate subsets for July
-    July_subset_X_observed_b = pd.concat([July_subset_1_X_observed_b, July_subset_2_X_observed_b, July_subset_3_X_observed_b])
-    July_subset_X_observed_b = direct_rad_div_diffuse_rad(July_subset_X_observed_b)
-
-
-    # Concatenate subsets for all dates 
-    subset_X_observed_b = pd.concat([April_subset_X_observed_b,Mai_subset_X_observed_b, Juni_subset_X_observed_b, July_subset_X_observed_b])
-    return subset_X_observed_b
-    
-def subset_summer_c(X_observed_c):
-    #Subset for April in X_observed_c
-    April_subset_1_X_observed_c = X_observed_c.iloc[8642-2:11521-1]  # Note that Python is 0-indexed and the ending index is exclusive
-    April_subset_2_X_observed_c = X_observed_c.iloc[43778-2:46657-1]
-    April_subset_3_X_observed_c = X_observed_c.iloc[78818-2:81697-1]
-    April_subset_4_X_observed_c = X_observed_c.iloc[113858-2:116737-1]
-
-    # Concatenate subsets for April
-    April_subset_X_observed_c = pd.concat([April_subset_1_X_observed_c, April_subset_2_X_observed_c, April_subset_3_X_observed_c, April_subset_4_X_observed_c])
-    April_subset_X_observed_c = direct_rad_div_diffuse_rad(April_subset_X_observed_c)
-
-
-    #Subset for Mai in X_observed_a for Mai
-    Mai_subset_1_X_observed_c = X_observed_c.iloc[11522-2:14497-1]  
-    Mai_subset_2_X_observed_c = X_observed_c.iloc[46658-2:49633-1]  
-    Mai_subset_3_X_observed_c = X_observed_c.iloc[81698-2:84673-1]  
-    Mai_subset_4_X_observed_c = X_observed_c.iloc[116738-2:] 
-
-    # Concatenate subsets for Mai
-    Mai_subset_X_observed_c = pd.concat([Mai_subset_1_X_observed_c, Mai_subset_2_X_observed_c, Mai_subset_3_X_observed_c, Mai_subset_4_X_observed_c])
-    Mai_subset_X_observed_c = direct_rad_div_diffuse_rad(Mai_subset_X_observed_c)
-
-
-    #Subset for Juni in X_observed_a 
-    Juni_subset_1_X_observed_c = X_observed_c.iloc[14498-2:17377-1]  
-    Juni_subset_2_X_observed_c = X_observed_c.iloc[49634-2:52513-1]  
-    Juni_subset_3_X_observed_c = X_observed_c.iloc[84674-2:87553-1] 
-
-    # Concatenate subsets for Juni
-    Juni_subset_X_observed_c = pd.concat([Juni_subset_1_X_observed_c, Juni_subset_2_X_observed_c, Juni_subset_3_X_observed_c])
-    Juni_subset_X_observed_c = direct_rad_div_diffuse_rad(Juni_subset_X_observed_c)
-
-
-    #Subset for April in X_observed_a 
-    July_subset_1_X_observed_c = X_observed_c.iloc[17378-2:20353-1]  
-    July_subset_2_X_observed_c = X_observed_c.iloc[52514-2:55489-1]  
-    July_subset_3_X_observed_c = X_observed_c.iloc[87554-2:90529-1]  
-
-    # Concatenate subsets for July
-    July_subset_X_observed_c = pd.concat([July_subset_1_X_observed_c, July_subset_2_X_observed_c, July_subset_3_X_observed_c])
-    July_subset_X_observed_c = direct_rad_div_diffuse_rad(July_subset_X_observed_c)
-
-
-    # Concatenate subsets for all dates 
-    subset_X_observed_c = pd.concat([April_subset_X_observed_c, Mai_subset_X_observed_c, Juni_subset_X_observed_c, July_subset_X_observed_c])
-    return subset_X_observed_c
+def subset_months(df, wanted_months):
+    df["month"]  = df['date_forecast'].dt.month
+    df_subset = df[df["month"].isin(wanted_months)]
+    return df_subset
