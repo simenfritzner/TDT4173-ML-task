@@ -7,12 +7,13 @@ import numpy as np
 #scaler = StandardScaler()
 scaler = MinMaxScaler()
 #scaler = RobustScaler()
+        
 def augment_y_c(df_y_c):
-    y_b_to_fit_1, y_c_to_predict_1= delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df_y_c,5,[19.6,9.8])
+    y_b_to_fit_1, y_c_to_predict_1= delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df_y_c.copy(),5,[19.6,9.8])
     return y_b_to_fit_1, y_c_to_predict_1
 
 def augment_y_b(df_y_b):
-    y_b_to_fit, y_b_to_predict_1 = drop_repeating_sequences_and_return_y_with_droped_indixes(df_y_b)
+    y_b_to_fit, y_b_to_predict_1 = drop_repeating_sequences_and_return_y_with_droped_indixes(df_y_b.copy())
     y_b_to_fit_2, y_b_to_predict_2 = delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(y_b_to_fit.copy(),200,[0.8625])
     y_b_to_fit_3, y_b_to_predict_3 = delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(y_b_to_fit_2.copy(),25,[0.8625])
     y_b_to_fit_4, y_b_to_predict_4 = drop_long_sequences_and_return_y_with_dropped_indices(y_b_to_fit_3.copy(),25)
@@ -328,11 +329,12 @@ def prepare_X(X_observed, X_estimated, selected_features, wanted_months):
     X_train = add_features(X_train)
     return X_train
 
-def prepare_testdata_rf_a(X_test, selected_features):
+def prepare_testdata_rf_a(X_test, selected_features, drop = False):
     X_test = clean_df(X_test, selected_features)
     X_test = mean_df(X_test)
     X_test = add_features(X_test)
-    X_test = X_test.drop(columns = ["date_forecast"])
+    if drop == False:
+        X_test = X_test.drop(columns = ["date_forecast"])
     return X_test
 
 def add_features(X_train):

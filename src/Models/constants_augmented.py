@@ -1,4 +1,4 @@
-from utilities import *
+"""from utilities import *
 from constants import *
 
 #Gustav sitt stygge arbeid 
@@ -145,4 +145,4 @@ July_subset_X_observed_c = direct_rad_div_diffuse_rad(July_subset_X_observed_c)
 # Concatenate subsets for all dates 
 subset_X_observed_c = pd.concat([April_subset_X_observed_c, Mai_subset_X_observed_c, Juni_subset_X_observed_c, July_subset_X_observed_c])
 
-
+"""

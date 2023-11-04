@@ -1,4 +1,4 @@
-from utilities import *
+"""from utilities import *
 from constants import *
 
 #Gustav sitt stygge arbeid 
@@ -12,16 +12,6 @@ X_test_c = direct_rad_div_diffuse_rad(X_test_c)
 
 
 #WANT TO CHANGE THIS (NB with predictions form an estimator) 
-#!!!!
-#!!!!
-#!!!!
-#!!!!
-#!!!!
-y_b = drop_repeating_sequences(y_b.copy())
-y_b = delete_ranges_of_zeros_and_interrupting_values(y_b.copy(),200,[0.8625])
-y_b = delete_ranges_of_zeros_and_interrupting_values(y_b.copy(),25,[0.8625])
-y_b = drop_long_sequences(y_b.copy(),25)
-y_c = delete_ranges_of_zeros_and_interrupting_values(y_c.copy(),5,[19.6,9.8])
 
 #but the rest is perfect:=0 
 
@@ -155,4 +145,4 @@ July_subset_X_observed_c = direct_rad_div_diffuse_rad(July_subset_X_observed_c)
 # Concatenate subsets for all dates 
 subset_X_observed_c = pd.concat([April_subset_X_observed_c, Mai_subset_X_observed_c, Juni_subset_X_observed_c, July_subset_X_observed_c])
 
-
+"""
