@@ -132,10 +132,18 @@ def agumenting_time(df):
     df = df.drop(columns = ["new_time"])
     return df
 
+def add_forecast_time(df, observed = True):
+    if observed:
+        df["forecasted"] = 0
+    else:
+        df["forecasted"] = 1
+    return df
+            
+
 def direct_rad_div_diffuse_rad(df):
     df['dif_dat_rad'] = 0.0
-    condition = df['diffuse_rad_1h:J'] != 0
-    df.loc[condition, 'dif_dat_rad'] = df.loc[condition, 'direct_rad_1h:J'] / df.loc[condition, 'diffuse_rad_1h:J']
+    condition = df['diffuse_rad:W'] != 0
+    df.loc[condition, 'dif_dat_rad'] = df.loc[condition, 'direct_rad:W'] / df.loc[condition, 'diffuse_rad:W']
     return df
 
 def get_hyperparameters_for_rf(x_observed, x_estimated, y, selected_features ):
@@ -225,11 +233,11 @@ def mean_df(df):
     # Step 1: Keeping every 4th row in the date column
     date_column = df_copy['date_forecast'].iloc[::4]
     
-    """#Made it such that all the intresting columns having data for 1 hour average back in time is saved such for the last hour. Ex diffuse_rad_1h:j cl. 23:00 is used for the weather prediction 22:00
-    selected_col = ['diffuse_rad_1h:J', 'direct_rad_1h:J']
+    #Made it such that all the intresting columns having data for 1 hour average back in time is saved such for the last hour. Ex diffuse_rad_1h:j cl. 23:00 is used for the weather prediction 22:00
+    selected_col = ['diffuse_rad_1h:J', 'direct_rad_1h:J', 'clear_sky_energy_1h:J']
     selected_values = df_copy[selected_col].iloc[4::4].reset_index(drop=True)
     last_row = pd.DataFrame(df_copy[selected_col].iloc[-1]).T.reset_index(drop=True)
-    selected_values = pd.concat([selected_values, last_row], ignore_index=True)"""
+    selected_values = pd.concat([selected_values, last_row], ignore_index=True)
     
     # Step 2: Creating a grouping key
     grouping_key = np.floor(np.arange(len(df_copy)) / 4)
@@ -239,7 +247,7 @@ def mean_df(df):
     # Step 4: Reset index and merge the date column
     averaged_data.reset_index(drop=True, inplace=True)
     averaged_data['date_forecast'] = date_column.values
-    #averaged_data[selected_col] = selected_values.values
+    averaged_data[selected_col] = selected_values.values
     return averaged_data
 
 #Saves the predictions in proper format, y_pred needs to contain predicitions for all 3 locatoins
@@ -314,31 +322,34 @@ def drop_long_sequences(df, x):
 
     return df.drop(df.index[indexes_to_drop])
 
-def clean_mean_combine(X_observed, X_estimated, selected_features):
-    X_observed_clean = clean_df(X_observed, selected_features)
-    X_estimated_clean = clean_df(X_estimated, selected_features)
-    X_estimated_clean_mean = mean_df(X_estimated_clean)
-    X_observed_clean_mean = mean_df(X_observed_clean)
-    X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
-    return X_train
+def clean_mean_combine(df, selected_features):
+    df = clean_df(df, selected_features)
+    df = mean_df(df)
+    return df
 
 def prepare_X(X_observed, X_estimated, selected_features, wanted_months):
     X_observed = subset_months(X_observed.copy(), wanted_months)
-    X_train = clean_mean_combine(X_observed, X_estimated, selected_features)
-    X_train = add_features(X_train)
+    X_observed = clean_mean_combine(X_observed,selected_features)
+    X_estimated= clean_mean_combine(X_estimated.copy(),selected_features)
+    X_observed = add_features(X_observed)
+    X_estimated = add_features(X_estimated)
+    X_estimated = add_forecast_time(X_estimated, False)
+    X_observed = add_forecast_time(X_observed)
+    X_train = pd.concat([X_observed, X_estimated])
     return X_train
 
 def prepare_testdata_rf_a(X_test, selected_features):
     X_test = clean_df(X_test, selected_features)
     X_test = mean_df(X_test)
     X_test = add_features(X_test)
+    X_test = add_forecast_time(X_test, False)
     X_test = X_test.drop(columns = ["date_forecast"])
     return X_test
 
-def add_features(X_train):
-    X_train = direct_rad_div_diffuse_rad(X_train)
-    X_train = agumenting_time(X_train)
-    return X_train
+def add_features(df):
+    df = direct_rad_div_diffuse_rad(df)
+    df = agumenting_time(df)
+    return df
 
 def subset_months(X_observed, wanted_months):
     X_observed["month"]  = X_observed['date_forecast'].dt.month
