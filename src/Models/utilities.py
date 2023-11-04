@@ -9,8 +9,8 @@ scaler = MinMaxScaler()
 #scaler = RobustScaler()
         
 def augment_y_c(df_y_c):
-    y_b_to_fit_1, y_c_to_predict_1= delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df_y_c.copy(),5,[19.6,9.8])
-    return y_b_to_fit_1, y_c_to_predict_1
+    y_c_to_fit_1, y_c_to_predict_1= delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df_y_c.copy(),5,[19.6,9.8])
+    return y_c_to_fit_1, y_c_to_predict_1
 
 def augment_y_b(df_y_b):
     y_b_to_fit, y_b_to_predict_1 = drop_repeating_sequences_and_return_y_with_droped_indixes(df_y_b.copy())
@@ -226,11 +226,11 @@ def mean_df(df):
     # Step 1: Keeping every 4th row in the date column
     date_column = df_copy['date_forecast'].iloc[::4]
     
-    """#Made it such that all the intresting columns having data for 1 hour average back in time is saved such for the last hour. Ex diffuse_rad_1h:j cl. 23:00 is used for the weather prediction 22:00
+    #Made it such that all the intresting columns having data for 1 hour average back in time is saved such for the last hour. Ex diffuse_rad_1h:j cl. 23:00 is used for the weather prediction 22:00
     selected_col = ['diffuse_rad_1h:J', 'direct_rad_1h:J']
     selected_values = df_copy[selected_col].iloc[4::4].reset_index(drop=True)
     last_row = pd.DataFrame(df_copy[selected_col].iloc[-1]).T.reset_index(drop=True)
-    selected_values = pd.concat([selected_values, last_row], ignore_index=True)"""
+    selected_values = pd.concat([selected_values, last_row], ignore_index=True)
     
     # Step 2: Creating a grouping key
     grouping_key = np.floor(np.arange(len(df_copy)) / 4)
@@ -240,7 +240,7 @@ def mean_df(df):
     # Step 4: Reset index and merge the date column
     averaged_data.reset_index(drop=True, inplace=True)
     averaged_data['date_forecast'] = date_column.values
-    #averaged_data[selected_col] = selected_values.values
+    averaged_data[selected_col] = selected_values.values
     return averaged_data
 
 #Saves the predictions in proper format, y_pred needs to contain predicitions for all 3 locatoins
