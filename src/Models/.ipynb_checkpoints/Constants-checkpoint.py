@@ -39,8 +39,8 @@ X_test_a = add_all_features(X_test_a)
 X_test_b = add_all_features(X_test_b)
 X_test_c = add_all_features(X_test_c)
 
-wanted_months = [4,5,6,7,8]
-
+wanted_months = [3,4,5,6,7,8,9]
+#[3,4,5,6,7,8,9]
 selected_features = ['date_forecast',
  'absolute_humidity_2m:gm3',
  'air_density_2m:kgm3',

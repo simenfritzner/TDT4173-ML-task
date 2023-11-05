@@ -342,3 +342,34 @@ def subset_months(df, wanted_months):
     df["month"]  = df['date_forecast'].dt.month
     df_subset = df[df["month"].isin(wanted_months)]
     return df_subset
+
+def lag_feature(X, y, lags, window):
+    """
+    Perform feature engineering on X using values from y.
+    """
+    # Extract pv_measurement as the target variable
+    y_target = y['pv_measurement']
+    
+    # Ensure the target has a name
+    if y_target.name is None:
+        y_target.name = 'target'
+    
+    # Combine X and y for easier lag and rolling window calculations
+    df = pd.concat([X, y_target], axis=1)
+    
+    # Creating lag features
+    for lag in lags:
+        df[f'lag_{lag}'] = df[y_target.name].shift(lag)
+    
+    # Creating rolling window features
+    #df[f'rolling_mean_{window}'] = df[y_target.name].rolling(window=window).mean()
+    #df[f'rolling_std_{window}'] = df[y_target.name].rolling(window=window).std()
+    
+    # Drop NaN values which were introduced by lag and rolling window features
+    df = df.fillna(0)
+    
+    # Separate the features and target variable
+    X_engineered = df.drop(columns=[y_target.name])
+    y_engineered = df[y_target.name]
+    
+    return X_engineered
