@@ -39,6 +39,8 @@ X_test_a = add_all_features(X_test_a)
 X_test_b = add_all_features(X_test_b)
 X_test_c = add_all_features(X_test_c)
 
+X_test_a_unedited = X_test_a.copy()
+
 wanted_months = [4,5,6,7,8]
 
 selected_features = ['date_forecast',
