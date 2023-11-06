@@ -14,10 +14,13 @@ class model():
     def fit(self):
         self.model.fit(self.X_train, self.y_train["pv_measurement"])
         
-    def pred(self):
+    def pred(self, X_valid = "hei"):
         max_value = self.y_train["pv_measurement"].max()
         self.prediction = self.model.predict(self.X_test)
-        self.pred_estimated = self.model.predict(self.X_valid)
+        if not isinstance(X_valid, str):
+            self.pred_estimated = self.model.predict(X_valid)
+        else:
+            self.pred_estimated = self.model.predict(self.X_valid)
         self.prediction = self.prediction.clip(min = 0, max = max_value)
     
     def feature_importence_plot(self):
