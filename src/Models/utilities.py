@@ -8,8 +8,8 @@ import numpy as np
 scaler = MinMaxScaler()
 #scaler = RobustScaler()
 def augment_y_c(df_y_c):
-    y_b_to_fit_1, y_c_to_predict_1= delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df_y_c,5,[19.6,9.8])
-    return y_b_to_fit_1, y_c_to_predict_1
+    y_c_to_fit_1, y_c_to_predict_1= delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df_y_c,5,[19.6,9.8])
+    return y_c_to_fit_1, y_c_to_predict_1
 
 def augment_y_b(df_y_b):
     y_b_to_fit, y_b_to_predict_1 = drop_repeating_sequences_and_return_y_with_droped_indixes(df_y_b)
@@ -325,6 +325,7 @@ def clean_mean_combine(X_observed, X_estimated, selected_features):
 def prepare_X(X_observed, X_estimated, selected_features, wanted_months):
     X_observed = subset_months(X_observed.copy(), wanted_months)
     X_train = clean_mean_combine(X_observed, X_estimated, selected_features)
+    #X_train = add_all_features(X_train)
     return X_train
 
 def prepare_testdata_rf_a(X_test, selected_features):
@@ -336,6 +337,8 @@ def prepare_testdata_rf_a(X_test, selected_features):
 def add_all_features(df):
     df = direct_rad_div_diffuse_rad(df)
     df = agumenting_time(df)
+    df = add_lag_to_all_features(df,1)
+    df = add_lag_to_all_features(df,-1)
     return df
 
 def subset_months(df, wanted_months):
@@ -373,3 +376,102 @@ def lag_feature(X, y, lags, window):
     y_engineered = df[y_target.name]
     
     return X_engineered
+
+def add_a_to_the_other_datasets(X_train_a, y_a, X_train_other, y_other):
+    # Convert 'time' columns to datetime
+    y_a["new_time"] = pd.to_datetime(y_a['time'])
+    y_other["new_time"] = pd.to_datetime(y_other['time'])
+
+    # Extract month from datetime
+    y_a["month"] = y_a['new_time'].dt.month
+    y_other["month"] = y_other['new_time'].dt.month
+
+    # Iterate over each unique month
+    for month in y_a['month'].unique():
+        # Calculate average 'pv_measurement' for the current month in both datasets
+        average_pv_a = y_a.loc[y_a['month'] == month, 'pv_measurement'].mean()
+        average_pv_other = y_other.loc[y_other['month'] == month, 'pv_measurement'].mean()
+
+        # Calculate scaling factor
+        scaling_factor = average_pv_other / average_pv_a if average_pv_a != 0 else 0
+
+        # Apply scaling to 'pv_measurement' in y_a for the current month
+        y_a.loc[y_a['month'] == month, 'pv_measurement'] *= scaling_factor
+        
+    y_a.drop(columns=['new_time', 'month'], inplace=True)
+    y_other.drop(columns=['new_time', 'month'], inplace=True)
+    
+    X_train_other_and_a = pd.concat([X_train_a, X_train_other], axis = 0)
+    y_other_and_a = pd.concat([y_a, y_other], axis = 0)
+    
+    # Return the modified datasets
+    return X_train_other_and_a, y_other_and_a
+
+def add_lag_to_all_features(df, lag_steps=1):
+    # Create a new DataFrame to hold the lagged features
+    lagged_df = df.copy()
+    # Iterate over all columns to create lagged versions
+    for column in df.columns:
+        # Skip the date column if it exists
+        if column == 'date' or column == 'date_forecast':
+            continue
+        # Create a new lagged feature column
+        lagged_column_name = f"{column}_lag{lag_steps}"
+        lagged_df[lagged_column_name] = df[column].shift(lag_steps)
+    # Remove the rows with NaN values that result from shifting
+    lagged_df = lagged_df.dropna().reset_index(drop=True)
+    return lagged_df
+
+def add_a_to_the_other_datasets_nan(X_train_a, y_a, X_train_other, y_other):
+    # Convert 'time' columns to datetime if they are not already in datetime format
+    y_a["new_time"] = pd.to_datetime(y_a['time'], errors='coerce')
+    y_other["new_time"] = pd.to_datetime(y_other['time'], errors='coerce')
+
+    # Handle possible NaNs after conversion
+    y_a.dropna(subset=['new_time'], inplace=True)
+    y_other.dropna(subset=['new_time'], inplace=True)
+
+    # Extract month from datetime
+    y_a["month"] = y_a['new_time'].dt.month
+    y_other["month"] = y_other['new_time'].dt.month
+
+    # Iterate over each unique month
+    for month in y_a['month'].unique():
+        # Calculate average 'pv_measurement' for the current month in both datasets
+        average_pv_a = y_a.loc[y_a['month'] == month, 'pv_measurement'].mean()
+        average_pv_other = y_other.loc[y_other['month'] == month, 'pv_measurement'].mean()
+
+        # Avoid division by zero
+        if average_pv_a != 0:
+            scaling_factor = average_pv_other / average_pv_a
+        else:
+            # Handle the case where average_pv_a is 0; maybe set scaling_factor to NaN or some default value
+            scaling_factor = np.nan  # Or some other logic
+
+        # Apply scaling to 'pv_measurement' in y_a for the current month, handle NaN scaling_factor if necessary
+        if not np.isnan(scaling_factor):
+            y_a.loc[y_a['month'] == month, 'pv_measurement'] *= scaling_factor
+        
+    # Drop the temporary columns
+    y_a.drop(columns=['new_time', 'month'], inplace=True)
+    y_other.drop(columns=['new_time', 'month'], inplace=True)
+    
+    # Concatenate the datasets, handle indexes properly
+    X_train_other_and_a = pd.concat([X_train_a.reset_index(drop=True), X_train_other.reset_index(drop=True)], axis=0)
+    y_other_and_a = pd.concat([y_a.reset_index(drop=True), y_other.reset_index(drop=True)], axis=0)
+    
+    # Return the modified datasets
+    return X_train_other_and_a, y_other_and_a
+
+def lag_x(df):
+    lag_steps = -1  # This is the lag step; you can change it based on your requirements
+    df['lag_1_direct_rad_W'] = df['direct_rad:W'].shift(lag_steps)
+    df['lag_1_direct_rad_1h'] = df['direct_rad_1h:J'].shift(lag_steps)
+    df['lag_1_diffuse_rad_W'] = df['diffuse_rad:W'].shift(lag_steps)
+    df['lag_1_diffuse_rad_1h'] = df['diffuse_rad_1h:J'].shift(lag_steps)
+    df['lag_1_clear_sky_rad'] = df['clear_sky_rad:W'].shift(lag_steps)
+    df['lag_1_clear_sky_energy'] = df['clear_sky_energy_1h:J'].shift(lag_steps)
+    df['lag_1_dew_point_2m:K'] = df['dew_point_2m:K'].shift(lag_steps)
+    df['lag_1_sun_elevation_neg'] = df['sun_elevation:d'].shift(lag_steps)
+    df['lag_1_sun_elevation_pos'] = df['sun_elevation:d'].shift(1)
+    return df
