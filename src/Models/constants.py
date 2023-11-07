@@ -4,9 +4,9 @@ from utilities import *
 y_a = pd.read_parquet('../../Data/Data_and_task/A/train_targets.parquet')
 y_b = pd.read_parquet('../../Data/Data_and_task/B/train_targets.parquet')
 y_c = pd.read_parquet('../../Data/Data_and_task/C/train_targets.parquet')
-y_b = y_b.dropna()
-y_c=y_c.dropna()
-y_c = augment_y_c(y_c)
+
+y_c, _ = augment_y(y_c)
+
 #Loading estimated/forecasted training_weather from file
 X_estimated_a = pd.read_parquet('../../Data/Data_and_task/A/X_train_estimated.parquet')
 X_estimated_b = pd.read_parquet('../../Data/Data_and_task/B/X_train_estimated.parquet')

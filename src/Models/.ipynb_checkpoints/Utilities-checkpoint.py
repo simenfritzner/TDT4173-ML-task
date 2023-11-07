@@ -342,3 +342,32 @@ def subset_months(df, wanted_months):
     df["month"]  = df['date_forecast'].dt.month
     df_subset = df[df["month"].isin(wanted_months)]
     return df_subset
+
+def remove_all_predicted_values_during_given_time_frame(X_test_c, x_pred, hours_to_zero_out_b):
+    new_df = pd.DataFrame({
+        "date_forecast": X_test_c["date_forecast"].iloc[::4].reset_index(drop=True),
+        "pv_measurement": x_pred  # Assuming x_pred is the correct variable here
+    })
+
+    # Convert 'date_forecast' to datetime and extract hour and month
+    new_df["new_time"] = pd.to_datetime(new_df['date_forecast'])
+    new_df['hour'] = new_df['new_time'].dt.hour
+    new_df["month"] = new_df['new_time'].dt.month
+    
+    hourly_sum = new_df.groupby('hour')['pv_measurement'].sum()
+    """
+    # Iterate through each hour and print the total sum of 'pv_measurements'
+    print("before augmentation")
+    for hour, sum_pv in hourly_sum.items():
+        print(f"Hour {hour}: Total PV Measurements = {sum_pv}")
+    """ 
+    # Update pv_measurements to 0 based on the month-hour mapping
+    for month, hours in hours_to_zero_out_b.items():
+        new_df.loc[(new_df['month'] == month) & (new_df['hour'].isin(hours)), 'pv_measurement'] = 0
+    
+    #print_zeros(new_df)
+    augmented_pv_measurements = new_df['pv_measurement']
+
+    # Convert to array if needed
+    augmented_pv_measurements_array = augmented_pv_measurements.to_numpy()
+    return augmented_pv_measurements_array
