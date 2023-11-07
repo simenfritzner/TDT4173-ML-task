@@ -319,8 +319,9 @@ def clean_mean_combine(X_observed, X_estimated, selected_features):
     X_estimated_clean = clean_df(X_estimated, selected_features)
     X_estimated_clean_mean = mean_df(X_estimated_clean)
     X_observed_clean_mean = mean_df(X_observed_clean)
-    X_train = pd.concat([X_observed_clean, X_estimated_clean])
+    X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
     X_train = add_lag_and_lead_features(X_train, 1, ["direct_plus_diffuse","direct_plus_diffuse_1h"])
+    X_train = rolling_aggregates(X_train.copy(), rolling_aggregates_list, 24)
     return X_train
 
 def prepare_X(X_observed, X_estimated, selected_features, wanted_months, wanted_months_est):
@@ -329,10 +330,13 @@ def prepare_X(X_observed, X_estimated, selected_features, wanted_months, wanted_
     X_train = clean_mean_combine(X_observed, X_estimated, selected_features)
     return X_train
 
+rolling_aggregates_list = ['air_density_2m:kgm3','dew_point_2m:K','effective_cloud_cover:p','relative_humidity_1000hPa:p','sfc_pressure:hPa','sun_elevation:d','t_1000hPa:K','total_cloud_cover:p']
+
 def prepare_testdata_rf_a(X_test, selected_features):
     X_test = clean_df(X_test, selected_features)
     X_test = mean_df(X_test)
     X_test = add_lag_and_lead_features(X_test, 1, ["direct_plus_diffuse", "direct_plus_diffuse_1h"])
+    X_test = rolling_aggregates(X_test.copy(), rolling_aggregates_list, 24)
     X_test = X_test.drop(columns = ["date_forecast"])
     return X_test
 
@@ -425,3 +429,34 @@ def add_lag_and_lead_features(df, lag_steps=1, columns = []):
     lagged_df = lagged_df.reset_index(drop=True)
 
     return lagged_df
+
+def rolling_aggregates(df, cols, window):
+    for col in cols:
+        df[f"{col}_rolling_mean_{window}"] = df[col].rolling(window=window).mean()
+        df[f"{col}_rolling_std_{window}"] = df[col].rolling(window=window).std()
+        df[f"{col}_rolling_min_{window}"] = df[col].rolling(window=window).min()
+        df[f"{col}_rolling_max_{window}"] = df[col].rolling(window=window).max()
+    return df
+
+def resample_to_quarterly(df, interpolation_method, poly_order = 0):
+    # Set the time column as the index
+    df.set_index('time', inplace=True)
+    
+    if interpolation_method == "polynomial":
+        # Resample to 15-minute intervals and interpolate
+        df_quarterly = df.resample('15T').interpolate(method=interpolation_method, order = poly_order)
+    else:
+        df_quarterly = df.resample('15T').interpolate(method=interpolation_method)
+    
+    # Reset the index
+    df_quarterly.reset_index(inplace=True)
+    return df_quarterly
+
+def create_new_feature(df, column1, column2, operation):
+    # Define a dictionary mapping strings to actual Python operator functions
+    ops = {
+        '+': operator.add,
+        '-': operator.sub,
+        '*': operator.mul,
+        '/': operator.truediv,
+    }

@@ -25,7 +25,7 @@ class model():
     
     def feature_importence_plot(self):
         self.model.feature_importances_
-        plt.figure(figsize=(20,10))
+        plt.figure(figsize=(40,20))
         plt.barh(self.X_train.columns, self.model.feature_importances_)
     
     def corr_plot(self):
@@ -39,7 +39,7 @@ class model():
         linear_fit = polynomial(self.y_valid["pv_measurement"])
         
         # Create scatter plot
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(20, 10))
         plt.scatter(self.y_valid["pv_measurement"], self.pred_estimated, label='Data points')
         plt.plot(self.y_valid["pv_measurement"], linear_fit, color='red', label=f'Linear fit: y = {coefficients[0]:.2f}x + {coefficients[1]:.2f}')
         
