@@ -342,3 +342,34 @@ def subset_months(df, wanted_months):
     df["month"]  = df['date_forecast'].dt.month
     df_subset = df[df["month"].isin(wanted_months)]
     return df_subset
+
+
+def add_a_to_the_other_datasets(X_train_a, y_a, X_train_other, y_other):
+    # Convert 'time' columns to datetime
+    y_a["new_time"] = pd.to_datetime(y_a['time'])
+    y_other["new_time"] = pd.to_datetime(y_other['time'])
+
+    # Extract month from datetime
+    y_a["month"] = y_a['new_time'].dt.month
+    y_other["month"] = y_other['new_time'].dt.month
+
+    # Iterate over each unique month
+    for month in y_a['month'].unique():
+        # Calculate average 'pv_measurement' for the current month in both datasets
+        average_pv_a = y_a.loc[y_a['month'] == month, 'pv_measurement'].mean()
+        average_pv_other = y_other.loc[y_other['month'] == month, 'pv_measurement'].mean()
+
+        # Calculate scaling factor
+        scaling_factor = average_pv_other / average_pv_a if average_pv_a != 0 else 0
+
+        # Apply scaling to 'pv_measurement' in y_a for the current month
+        y_a.loc[y_a['month'] == month, 'pv_measurement'] *= scaling_factor
+        
+    y_a.drop(columns=['new_time', 'month'], inplace=True)
+    y_other.drop(columns=['new_time', 'month'], inplace=True)
+    
+    X_train_other_and_a = pd.concat([X_train_a, X_train_other])
+    y_other_and_a = pd.concat([y_a, y_other])
+    
+    # Return the modified datasets
+    return X_train_other_and_a, y_other_and_a
