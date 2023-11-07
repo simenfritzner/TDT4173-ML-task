@@ -19,6 +19,8 @@ class model():
         self.prediction = self.model.predict(self.X_test)
         self.pred_estimated = self.model.predict(self.X_valid)
         self.prediction = self.prediction.clip(min = 0, max = max_value)
+    def pred_valid(self, X_valid):
+        self.pred_valid = self.model.predict(X_valid)
     
     def feature_importence_plot(self):
         self.model.feature_importances_

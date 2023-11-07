@@ -202,7 +202,7 @@ def resize_training_data(X_train, y_train):
     
     merged = pd.merge(X_train, y_train,left_on=X_date_feature, right_on='time', how='inner')
     y_train_resized = merged[y_features]
-    columns_to_drop = y_features + [X_date_feature]
+    columns_to_drop = y_features #+ [X_date_feature]
     X_train_resized = merged.drop(columns = columns_to_drop)
     return X_train_resized, y_train_resized
     
@@ -322,8 +322,9 @@ def clean_mean_combine(X_observed, X_estimated, selected_features):
     X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
     return X_train
 
-def prepare_X(X_observed, X_estimated, selected_features, wanted_months):
+def prepare_X(X_observed, X_estimated, selected_features, wanted_months, wanted_months_est):
     X_observed = subset_months(X_observed.copy(), wanted_months)
+    X_estimated = subset_months(X_estimated.copy(), wanted_months_est)
     X_train = clean_mean_combine(X_observed, X_estimated, selected_features)
     return X_train
 
