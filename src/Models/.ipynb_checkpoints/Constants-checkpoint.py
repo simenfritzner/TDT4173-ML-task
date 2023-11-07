@@ -5,9 +5,11 @@ y_a = pd.read_parquet('../../Data/Data_and_task/A/train_targets.parquet')
 y_b = pd.read_parquet('../../Data/Data_and_task/B/train_targets.parquet')
 y_c = pd.read_parquet('../../Data/Data_and_task/C/train_targets.parquet')
 y_b = y_b.dropna()
-y_c=y_c.dropna()
+y_c_non = y_c.dropna()
+
 #y_b = augment_y_b(y_b_read)[1]
-#y_c = augment_y_b(y_c_read)[1]
+y_c = augment_y_c(y_c)[1]
+y_c = y_c.dropna()
 #Loading estimated/forecasted training_weather from file
 X_estimated_a = pd.read_parquet('../../Data/Data_and_task/A/X_train_estimated.parquet')
 X_estimated_b = pd.read_parquet('../../Data/Data_and_task/B/X_train_estimated.parquet')
@@ -40,9 +42,9 @@ X_test_a = add_all_features(X_test_a)
 X_test_b = add_all_features(X_test_b)
 X_test_c = add_all_features(X_test_c)
 
-wanted_months = [4,5,6,7,8,9]
+wanted_months = [3,4,5,6,7,8,9]
 #[3,4,5,6,7,8,9]
-"""
+
 selected_features = ['date_forecast',
  'absolute_humidity_2m:gm3',
  'air_density_2m:kgm3',
@@ -95,11 +97,14 @@ selected_features = ['date_forecast',
  'month',
  #'time_decimal',
  'hour_sin',
- 'hour_cos']
+ 'hour_cos',
+ 'direct_plus_diffuse',
+ 'direct_plus_diffuse_1h'
+ ]
 selected_features.remove('ceiling_height_agl:m')
 selected_features.remove('cloud_base_agl:m')
-selected_features.remove('snow_density:kgm3')"""
-
+selected_features.remove('snow_density:kgm3')
+"""
 selected_features = ['date_forecast',
  'absolute_humidity_2m:gm3',
  'air_density_2m:kgm3',
@@ -152,7 +157,9 @@ selected_features = ['date_forecast',
  'month',
  'time_decimal',
  'hour_sin',
- 'hour_cos']
+ 'hour_cos',
+ 'direct_plus_diffuse',
+ 'direct_plus_diffuse_1h']
 selected_features.remove('ceiling_height_agl:m')
 selected_features.remove('cloud_base_agl:m')
-selected_features.remove('snow_density:kgm3')
+selected_features.remove('snow_density:kgm3')"""

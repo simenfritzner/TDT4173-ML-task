@@ -3,12 +3,13 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.preprocessing import RobustScaler
 import numpy as np
+from sklearn.utils import shuffle
 
 #scaler = StandardScaler()
 scaler = MinMaxScaler()
 #scaler = RobustScaler()
 def augment_y_c(df_y_c):
-    y_c_to_fit_1, y_c_to_predict_1= delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df_y_c,5,[19.6,9.8])
+    y_c_to_fit_1, y_c_to_predict_1= delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df_y_c.copy(),5,[19.6,9.8])
     return y_c_to_fit_1, y_c_to_predict_1
 
 def augment_y_b(df_y_b):
@@ -204,6 +205,8 @@ def resize_training_data(X_train, y_train):
     y_train_resized = merged[y_features]
     columns_to_drop = y_features + [X_date_feature]
     X_train_resized = merged.drop(columns = columns_to_drop)
+    # Assuming X_train is a DataFrame and y_train is a Series
+    #X_train_resized, y_train_resized = shuffle(X_train_resized, y_train_resized, random_state=42)
     return X_train_resized, y_train_resized
     
 #Splits the training data such that it is training set is observed and some estimated, valid is some estimated and test is some estimated
@@ -320,62 +323,37 @@ def clean_mean_combine(X_observed, X_estimated, selected_features):
     X_estimated_clean_mean = mean_df(X_estimated_clean)
     X_observed_clean_mean = mean_df(X_observed_clean)
     X_train = pd.concat([X_observed_clean_mean, X_estimated_clean_mean])
+    #X_train = add_lag_to_all_features(X_train,1)
+    #X_train = add_lag_to_all_features(X_train,-1)
+    #X_train = add_lag_and_lead_features(X_train, 1)
     return X_train
 
 def prepare_X(X_observed, X_estimated, selected_features, wanted_months):
     X_observed = subset_months(X_observed.copy(), wanted_months)
     X_train = clean_mean_combine(X_observed, X_estimated, selected_features)
-    #X_train = add_all_features(X_train)
+    #X_train = lag_x(X_train)
+    X_train = add_lag_and_lead_features(X_train,1, ["direct_plus_diffuse_1h", "direct_plus_diffuse"])
     return X_train
 
 def prepare_testdata_rf_a(X_test, selected_features):
     X_test = clean_df(X_test, selected_features)
     X_test = mean_df(X_test)
+    X_test = add_lag_and_lead_features(X_test,1, ["direct_plus_diffuse_1h", "direct_plus_diffuse"])
+    #X_test = lag_x(X_test)
     X_test = X_test.drop(columns = ["date_forecast"])
     return X_test
 
 def add_all_features(df):
     df = direct_rad_div_diffuse_rad(df)
     df = agumenting_time(df)
-    df = add_lag_to_all_features(df,1)
-    df = add_lag_to_all_features(df,-1)
+    df["direct_plus_diffuse"] = df["direct_rad:W"] + df["diffuse_rad:W"]
+    df["direct_plus_diffuse_1h"] = df["direct_rad_1h:J"] + df["diffuse_rad_1h:J"]
     return df
 
 def subset_months(df, wanted_months):
     df["month"]  = df['date_forecast'].dt.month
     df_subset = df[df["month"].isin(wanted_months)]
     return df_subset
-
-def lag_feature(X, y, lags, window):
-    """
-    Perform feature engineering on X using values from y.
-    """
-    # Extract pv_measurement as the target variable
-    y_target = y['pv_measurement']
-    
-    # Ensure the target has a name
-    if y_target.name is None:
-        y_target.name = 'target'
-    
-    # Combine X and y for easier lag and rolling window calculations
-    df = pd.concat([X, y_target], axis=1)
-    
-    # Creating lag features
-    for lag in lags:
-        df[f'lag_{lag}'] = df[y_target.name].shift(lag)
-    
-    # Creating rolling window features
-    #df[f'rolling_mean_{window}'] = df[y_target.name].rolling(window=window).mean()
-    #df[f'rolling_std_{window}'] = df[y_target.name].rolling(window=window).std()
-    
-    # Drop NaN values which were introduced by lag and rolling window features
-    df = df.fillna(0)
-    
-    # Separate the features and target variable
-    X_engineered = df.drop(columns=[y_target.name])
-    y_engineered = df[y_target.name]
-    
-    return X_engineered
 
 def add_a_to_the_other_datasets(X_train_a, y_a, X_train_other, y_other):
     # Convert 'time' columns to datetime
@@ -406,7 +384,7 @@ def add_a_to_the_other_datasets(X_train_a, y_a, X_train_other, y_other):
     
     # Return the modified datasets
     return X_train_other_and_a, y_other_and_a
-
+"""
 def add_lag_to_all_features(df, lag_steps=1):
     # Create a new DataFrame to hold the lagged features
     lagged_df = df.copy()
@@ -420,7 +398,55 @@ def add_lag_to_all_features(df, lag_steps=1):
         lagged_df[lagged_column_name] = df[column].shift(lag_steps)
     # Remove the rows with NaN values that result from shifting
     lagged_df = lagged_df.dropna().reset_index(drop=True)
+    return lagged_df"""
+
+def add_lag_and_lead_features(df, lag_steps=1, columns = []):
+    # Create a new DataFrame to hold the lagged and lead features
+    lagged_df = pd.DataFrame()
+
+    # Make sure the 'date' column is a datetime type
+    df['date_forecast'] = pd.to_datetime(df['date_forecast'])
+
+    # Group by date to ensure continuity within each day
+    grouped = df.groupby(df['date_forecast'].dt.date)
+
+    for _, group in grouped:
+        # Reset index to allow proper shifting within group
+        group = group.reset_index(drop=True)
+
+        # Copy the current group to avoid modifying the original data
+        temp_group = group.copy()
+
+        # Iterate over all columns to create lagged and lead versions
+        for column in columns:
+            # Skip the date column if it exists
+            if column == 'date' or column == 'date_forecast':
+                continue
+
+            # Create lagged feature for previous values
+            lagged_column_name = f"{column}_lag{lag_steps}"
+            temp_group[lagged_column_name] = group[column].shift(lag_steps).fillna(group[column])
+
+            # Create lead feature for future values
+            lead_column_name = f"{column}_lead{lag_steps}"
+            temp_group[lead_column_name] = group[column].shift(-lag_steps).fillna(group[column])
+
+            # Create a column for the difference between the lagged value and the present value (lag -1 - present)
+            diff_lag_column_name = f"{column}_diff_lag{lag_steps}"
+            temp_group[diff_lag_column_name] = temp_group[lagged_column_name] - group[column]
+
+            # Create a column for the difference between the lead value and the present value (lag +1 - present)
+            #diff_lead_column_name = f"{column}_diff_lead{lag_steps}"
+            #temp_group[diff_lead_column_name] = temp_group[lead_column_name] - group[column]
+
+        # Append the processed group to the lagged_df
+        lagged_df = pd.concat([lagged_df, temp_group], axis=0)
+
+    # Reset the index of the resulting DataFrame
+    lagged_df = lagged_df.reset_index(drop=True)
+
     return lagged_df
+
 
 def add_a_to_the_other_datasets_nan(X_train_a, y_a, X_train_other, y_other):
     # Convert 'time' columns to datetime if they are not already in datetime format
@@ -464,14 +490,18 @@ def add_a_to_the_other_datasets_nan(X_train_a, y_a, X_train_other, y_other):
     return X_train_other_and_a, y_other_and_a
 
 def lag_x(df):
-    lag_steps = -1  # This is the lag step; you can change it based on your requirements
-    df['lag_1_direct_rad_W'] = df['direct_rad:W'].shift(lag_steps)
-    df['lag_1_direct_rad_1h'] = df['direct_rad_1h:J'].shift(lag_steps)
-    df['lag_1_diffuse_rad_W'] = df['diffuse_rad:W'].shift(lag_steps)
-    df['lag_1_diffuse_rad_1h'] = df['diffuse_rad_1h:J'].shift(lag_steps)
-    df['lag_1_clear_sky_rad'] = df['clear_sky_rad:W'].shift(lag_steps)
-    df['lag_1_clear_sky_energy'] = df['clear_sky_energy_1h:J'].shift(lag_steps)
-    df['lag_1_dew_point_2m:K'] = df['dew_point_2m:K'].shift(lag_steps)
-    df['lag_1_sun_elevation_neg'] = df['sun_elevation:d'].shift(lag_steps)
-    df['lag_1_sun_elevation_pos'] = df['sun_elevation:d'].shift(1)
+    lag_steps = 1  # This is the lag step; you can change it based on your requirements
+    df['lag_pos_direct_diffuse_rad_W'] = df['direct_plus_diffuse'].shift(lag_steps)
+    df['lag_neg_direct_diffuse_rad_W'] = df['direct_plus_diffuse'].shift(-lag_steps)
+    df['lag_pos_direct_diffuse_rad_1h'] = df['direct_plus_diffuse_1h'].shift(lag_steps)
+    df['lag_neg_direct_diffuse_rad_1h'] = df['direct_plus_diffuse_1h'].shift(-lag_steps)
+    #df['lag_1_direct_rad_W'] = df['direct_rad:W'].shift(lag_steps)
+    #df['lag_1_direct_rad_1h'] = df['direct_rad_1h:J'].shift(lag_steps)
+    #df['lag_1_diffuse_rad_W'] = df['diffuse_rad:W'].shift(lag_steps)
+    #df['lag_1_diffuse_rad_1h'] = df['diffuse_rad_1h:J'].shift(lag_steps)
+    #df['lag_1_clear_sky_rad'] = df['clear_sky_rad:W'].shift(lag_steps)
+    #df['lag_1_clear_sky_energy'] = df['clear_sky_energy_1h:J'].shift(lag_steps)
+    #df['lag_1_dew_point_2m:K'] = df['dew_point_2m:K'].shift(lag_steps)
+    #df['lag_1_sun_elevation_neg'] = df['sun_elevation:d'].shift(lag_steps)
+    #df['lag_1_sun_elevation_pos'] = df['sun_elevation:d'].shift(1)
     return df

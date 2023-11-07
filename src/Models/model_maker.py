@@ -25,7 +25,7 @@ class model():
     
     def feature_importence_plot(self):
         self.model.feature_importances_
-        plt.figure(figsize=(50,100))
+        plt.figure(figsize=(20,10))
         plt.barh(self.X_train.columns, self.model.feature_importances_)
     
     def corr_plot(self):
