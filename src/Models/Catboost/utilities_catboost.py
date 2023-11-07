@@ -1,5 +1,5 @@
 from model_maker import *
-from catboost import CatBoostRegressor, Pool
+from catboost import CatBoostRegressor
 
 class catboost_model(model):
     def __init__(self, hyperparameters, X_train, X_test, y_train):
