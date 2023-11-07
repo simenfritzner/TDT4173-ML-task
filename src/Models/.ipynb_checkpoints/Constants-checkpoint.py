@@ -4,8 +4,8 @@ from utilities import *
 y_a = pd.read_parquet('../../Data/Data_and_task/A/train_targets.parquet')
 y_b = pd.read_parquet('../../Data/Data_and_task/B/train_targets.parquet')
 y_c = pd.read_parquet('../../Data/Data_and_task/C/train_targets.parquet')
-y_b = y_b.dropna()
-y_c=y_c.dropna()
+
+y_c, _ = augment_y(y_c)
 
 #Loading estimated/forecasted training_weather from file
 X_estimated_a = pd.read_parquet('../../Data/Data_and_task/A/X_train_estimated.parquet')
@@ -39,7 +39,7 @@ X_test_a = add_all_features(X_test_a)
 X_test_b = add_all_features(X_test_b)
 X_test_c = add_all_features(X_test_c)
 
-wanted_months = [4,5,6,7,8]
+wanted_months = [3,4,5,6,7,8,9]
 
 selected_features = ['date_forecast',
  'absolute_humidity_2m:gm3',
