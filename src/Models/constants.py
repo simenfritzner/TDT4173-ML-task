@@ -6,7 +6,7 @@ y_b = pd.read_parquet('../../Data/Data_and_task/B/train_targets.parquet')
 y_c = pd.read_parquet('../../Data/Data_and_task/C/train_targets.parquet')
 y_b = y_b.dropna()
 y_c=y_c.dropna()
-y_c, _ = augment_y_c(y_c)
+#y_c, _ = augment_y_c(y_c)
 
 #Loading estimated/forecasted training_weather from file
 X_estimated_a = pd.read_parquet('../../Data/Data_and_task/A/X_train_estimated.parquet')
@@ -56,14 +56,14 @@ selected_features = ['date_forecast',
  'direct_rad:W',
  'direct_rad_1h:J',
  'effective_cloud_cover:p',
- 'elevation:m',
- 'fresh_snow_12h:cm',
- 'fresh_snow_1h:cm',
+ #'elevation:m',
+ #'fresh_snow_12h:cm',
+ #'fresh_snow_1h:cm',
  'fresh_snow_24h:cm',
- 'fresh_snow_3h:cm',
- 'fresh_snow_6h:cm',
- 'is_day:idx',
- 'is_in_shadow:idx',
+ #'fresh_snow_3h:cm',
+ #'fresh_snow_6h:cm',
+ #'is_day:idx',
+ #'is_in_shadow:idx',
  'msl_pressure:hPa',
  'precip_5min:mm',
  'precip_type_5min:idx',
@@ -74,10 +74,10 @@ selected_features = ['date_forecast',
  'relative_humidity_1000hPa:p',
  'sfc_pressure:hPa',
  'snow_density:kgm3',
- 'snow_depth:cm',
- 'snow_drift:idx',
- 'snow_melt_10min:mm',
- 'snow_water:kgm2',
+ #'snow_depth:cm',
+ #'snow_drift:idx',
+ #'snow_melt_10min:mm',
+ #'snow_water:kgm2',
  'sun_azimuth:d',
  'sun_elevation:d',
  'super_cooled_liquid_water:kgm2',
@@ -87,14 +87,17 @@ selected_features = ['date_forecast',
  'wind_speed_10m:ms',
  'wind_speed_u_10m:ms',
  'wind_speed_v_10m:ms',
- 'wind_speed_w_1000hPa:ms',
+ #'wind_speed_w_1000hPa:ms',
  'dif_dat_rad',
  'hour',
- 'minute',
+ #'minute',
  'month',
- 'time_decimal',
+ #'time_decimal',
  'hour_sin',
- 'hour_cos']
+ #'hour_cos',
+ 'direct_plus_diffuse',
+ 'direct_plus_diffuse_1h'
+ ]
 selected_features.remove('ceiling_height_agl:m')
 selected_features.remove('cloud_base_agl:m')
 selected_features.remove('snow_density:kgm3')
