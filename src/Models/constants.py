@@ -6,7 +6,12 @@ y_b = pd.read_parquet('../../Data/Data_and_task/B/train_targets.parquet')
 y_c = pd.read_parquet('../../Data/Data_and_task/C/train_targets.parquet')
 y_b = y_b.dropna()
 y_c=y_c.dropna()
-#y_c, _ = augment_y_c(y_c)
+y_a["pv_measurement"] = y_a["pv_measurement"].abs()
+y_b["pv_measurement"] = y_b["pv_measurement"].abs()
+y_c["pv_measurement"] = y_c["pv_measurement"].abs()
+y_a = remove_repeating(y_a)
+y_b = remove_repeating(y_b)
+y_c = remove_repeating(y_c)
 
 #Loading estimated/forecasted training_weather from file
 X_estimated_a = pd.read_parquet('../../Data/Data_and_task/A/X_train_estimated.parquet')
@@ -23,10 +28,10 @@ X_test_a = pd.read_parquet('../../Data/Data_and_task/A/X_test_estimated.parquet'
 X_test_b = pd.read_parquet('../../Data/Data_and_task/B/X_test_estimated.parquet')
 X_test_c = pd.read_parquet('../../Data/Data_and_task/C/X_test_estimated.parquet')
 
-y_b = drop_repeating_sequences(y_b.copy())
-y_b = delete_ranges_of_zeros_and_interrupting_values(y_b.copy(),200,[0.8625])
-y_b = delete_ranges_of_zeros_and_interrupting_values(y_b.copy(),25,[0.8625])
-y_b = drop_long_sequences(y_b.copy(),25)
+#y_b = drop_repeating_sequences(y_b.copy())
+#y_b = delete_ranges_of_zeros_and_interrupting_values(y_b.copy(),200,[0.8625])
+#y_b = delete_ranges_of_zeros_and_interrupting_values(y_b.copy(),25,[0.8625])
+#y_b = drop_long_sequences(y_b.copy(),25)
 
 X_estimated_a = add_all_features(X_estimated_a)
 X_estimated_b = add_all_features(X_estimated_b)
