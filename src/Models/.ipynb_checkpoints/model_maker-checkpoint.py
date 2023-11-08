@@ -17,7 +17,7 @@ class model():
     def pred(self):
         max_value = self.y_train["pv_measurement"].max()
         self.prediction = self.model.predict(self.X_test)
-        self.pred_estimated = self.model.predict(self.X_valid)
+        #self.pred_estimated = self.model.predict(self.X_valid)
         self.prediction = self.prediction.clip(min = 0, max = max_value)
     
     def feature_importence_plot(self):
