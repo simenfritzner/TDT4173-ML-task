@@ -7,17 +7,44 @@ import numpy as np
 #scaler = StandardScaler()
 scaler = MinMaxScaler()
 #scaler = RobustScaler()
-def augment_y_c(df_y_c):
-    y_b_to_fit_1, y_c_to_predict_1= delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(df_y_c,5,[19.6,9.8])
-    return y_b_to_fit_1, y_c_to_predict_1
+def remove_repeating(df):
+    # Assuming df is your DataFrame and y_c is defined elsewhere
 
-def augment_y_b(df_y_b):
-    y_b_to_fit, y_b_to_predict_1 = drop_repeating_sequences_and_return_y_with_droped_indixes(df_y_b)
-    y_b_to_fit_2, y_b_to_predict_2 = delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(y_b_to_fit.copy(),200,[0.8625])
-    y_b_to_fit_3, y_b_to_predict_3 = delete_ranges_of_zeros_and_interrupting_values_and_return_y_with_dropped_indices(y_b_to_fit_2.copy(),25,[0.8625])
-    y_b_to_fit_4, y_b_to_predict_4 = drop_long_sequences_and_return_y_with_dropped_indices(y_b_to_fit_3.copy(),25)
-    y_b_to_predict = pd.concat([y_b_to_predict_1, y_b_to_predict_2, y_b_to_predict_3, y_b_to_predict_4], axis=0)
-    return y_b_to_fit_4, y_b_to_predict
+    # Set df to y_c
+
+    # Convert 'time' column to datetime if it's not already
+    # Add a helper column to identify shifts in 'pv_measurement' value and same day check
+    df['shifted_pv'] = df['pv_measurement'].shift().bfill()
+    df['same_day'] = df['time'].dt.date == df['time'].shift().dt.date
+
+    # Identify rows where the value is the same as the previous one and is on the same day
+    df['same_as_prev'] = (df['pv_measurement'] == df['shifted_pv']) & df['same_day']
+
+    # Create a group identifier for consecutive identical measurements within the same day
+    df['group'] = (~df['same_as_prev']).cumsum()
+
+    # Prepare a DataFrame to collect periods to remove
+    indices_to_remove = []
+
+    # Process each group and determine if it should be removed
+    for name, group in df.groupby(['group', df['time'].dt.date]):
+        duration_hours = (group['time'].iloc[-1] - group['time'].iloc[0]).total_seconds() / 3600
+        duration_count = len(group)
+        value = group['pv_measurement'].iloc[0]
+        if value != 0 and duration_hours > 3:
+            # For non-zero values repeated for more than 3 hours
+            indices_to_remove.extend(group.index)
+        elif value == 0 and duration_count == 24:
+            # For zero values repeated for all 24 hours of the same day
+            indices_to_remove.extend(group.index)
+
+    # Create a new DataFrame without the repeated periods
+    df_cleaned = df.drop(indices_to_remove)
+
+    # Drop the helper columns from the new DataFrame
+    df_cleaned.drop(['shifted_pv', 'same_day', 'same_as_prev', 'group'], axis=1, inplace=True)
+
+    return df_cleaned
 
 def drop_repeating_sequences_and_return_y_with_droped_indixes(df):
     indexes_to_drop = set()  # Change this to a set to avoid duplicates
