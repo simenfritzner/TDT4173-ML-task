@@ -325,17 +325,21 @@ def clean_mean_combine(X_observed, X_estimated, selected_features):
 def prepare_X(X_observed, X_estimated, selected_features, wanted_months):
     X_observed = subset_months(X_observed.copy(), wanted_months)
     X_train = clean_mean_combine(X_observed, X_estimated, selected_features)
+    X_train = add_lag_and_lead_features(X_train, 1, ['direct_plus_diffuse', 'direct_plus_diffuse_1h'])
     return X_train
 
 def prepare_testdata_rf_a(X_test, selected_features):
     X_test = clean_df(X_test, selected_features)
     X_test = mean_df(X_test)
+    X_test = add_lag_and_lead_features(X_test, 1, ['direct_plus_diffuse', 'direct_plus_diffuse_1h'])
     X_test = X_test.drop(columns = ["date_forecast"])
     return X_test
 
 def add_all_features(df):
     df = direct_rad_div_diffuse_rad(df)
     df = agumenting_time(df)
+    df["direct_plus_diffuse"] = df["direct_rad:W"] + df["diffuse_rad:W"]
+    df["direct_plus_diffuse_1h"] = df["direct_rad_1h:J"] + df["diffuse_rad_1h:J"]
     return df
 
 def subset_months(df, wanted_months):
@@ -371,3 +375,50 @@ def remove_all_predicted_values_during_given_time_frame(X_test_c, x_pred, hours_
     # Convert to array if needed
     augmented_pv_measurements_array = augmented_pv_measurements.to_numpy()
     return augmented_pv_measurements_array
+
+def add_lag_and_lead_features(df, lag_steps=1, columns = []):
+    # Create a new DataFrame to hold the lagged and lead features
+    lagged_df = pd.DataFrame()
+
+    # Make sure the 'date' column is a datetime type
+    df['date_forecast'] = pd.to_datetime(df['date_forecast'])
+
+    # Group by date to ensure continuity within each day
+    grouped = df.groupby(df['date_forecast'].dt.date)
+
+    for _, group in grouped:
+        # Reset index to allow proper shifting within group
+        group = group.reset_index(drop=True)
+
+        # Copy the current group to avoid modifying the original data
+        temp_group = group.copy()
+
+        # Iterate over all columns to create lagged and lead versions
+        for column in columns:
+            # Skip the date column if it exists
+            if column == 'date' or column == 'date_forecast':
+                continue
+
+            # Create lagged feature for previous values
+            lagged_column_name = f"{column}_lag{lag_steps}"
+            temp_group[lagged_column_name] = group[column].shift(lag_steps).fillna(group[column])
+
+            # Create lead feature for future values
+            lead_column_name = f"{column}_lead{lag_steps}"
+            temp_group[lead_column_name] = group[column].shift(-lag_steps).fillna(group[column])
+
+            # Create a column for the difference between the lagged value and the present value (lag -1 - present)
+            diff_lag_column_name = f"{column}_diff_lag{lag_steps}"
+            temp_group[diff_lag_column_name] = temp_group[lagged_column_name] - group[column]
+
+            # Create a column for the difference between the lead value and the present value (lag +1 - present)
+            #diff_lead_column_name = f"{column}_diff_lead{lag_steps}"
+            #temp_group[diff_lead_column_name] = temp_group[lead_column_name] - group[column]
+
+        # Append the processed group to the lagged_df
+        lagged_df = pd.concat([lagged_df, temp_group], axis=0)
+
+    # Reset the index of the resulting DataFrame
+    lagged_df = lagged_df.reset_index(drop=True)
+
+    return lagged_df
