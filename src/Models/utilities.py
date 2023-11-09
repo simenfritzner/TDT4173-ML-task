@@ -209,11 +209,14 @@ def date_forecast_to_time(df):
             
 #Scales all the feature value in a way they take a simmilar range
 def scale_df(df, fit):
-    if fit == True:
-        df = scaler.fit_transform(df)
+    if fit:
+        scaled_array = scaler.fit_transform(df)
     else:
-        df = scaler.transform(df)
-    return df
+        scaled_array = scaler.transform(df)
+    
+    # Convert the scaled array back into a pandas DataFrame
+    scaled_df = pd.DataFrame(scaled_array, index=df.index, columns=df.columns)
+    return scaled_df
 
 #Removes all features from a df except selected_features
 def clean_df(df, selected_features):
