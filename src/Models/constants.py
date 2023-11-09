@@ -5,7 +5,7 @@ y_a = pd.read_parquet('../../Data/Data_and_task/A/train_targets.parquet')
 y_b = pd.read_parquet('../../Data/Data_and_task/B/train_targets.parquet')
 y_c = pd.read_parquet('../../Data/Data_and_task/C/train_targets.parquet')
 y_b = y_b.dropna()
-y_c=y_c.dropna()
+y_c = y_c.dropna()
 y_a["pv_measurement"] = y_a["pv_measurement"].abs()
 y_b["pv_measurement"] = y_b["pv_measurement"].abs()
 y_c["pv_measurement"] = y_c["pv_measurement"].abs()
@@ -50,11 +50,11 @@ wanted_months = [3,4,5,6,7,8,9]
 selected_features = ['date_forecast',
  'absolute_humidity_2m:gm3',
  'air_density_2m:kgm3',
- 'ceiling_height_agl:m',
+ #'ceiling_height_agl:m',
  'clear_sky_energy_1h:J',
  'clear_sky_rad:W',
- 'cloud_base_agl:m',
- 'dew_or_rime:idx',
+ #'cloud_base_agl:m',
+ #"'dew_or_rime:idx',
  'dew_point_2m:K',
  'diffuse_rad:W',
  'diffuse_rad_1h:J',
@@ -71,19 +71,19 @@ selected_features = ['date_forecast',
  #'is_in_shadow:idx',
  'msl_pressure:hPa',
  'precip_5min:mm',
- 'precip_type_5min:idx',
+ #'precip_type_5min:idx',
  'pressure_100m:hPa',
  'pressure_50m:hPa',
- 'prob_rime:p',
- 'rain_water:kgm2',
+ #'prob_rime:p',
+ #'rain_water:kgm2',
  'relative_humidity_1000hPa:p',
  'sfc_pressure:hPa',
- 'snow_density:kgm3',
+ #'snow_density:kgm3',
  #'snow_depth:cm',
  #'snow_drift:idx',
  #'snow_melt_10min:mm',
  #'snow_water:kgm2',
- 'sun_azimuth:d',
+ #'sun_azimuth:d',
  'sun_elevation:d',
  'super_cooled_liquid_water:kgm2',
  't_1000hPa:K',
@@ -103,6 +103,3 @@ selected_features = ['date_forecast',
  'direct_plus_diffuse',
  'direct_plus_diffuse_1h'
  ]
-selected_features.remove('ceiling_height_agl:m')
-selected_features.remove('cloud_base_agl:m')
-selected_features.remove('snow_density:kgm3')

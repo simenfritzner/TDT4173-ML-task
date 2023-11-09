@@ -131,4 +131,3 @@ class model():
         self.cross_val_actuals = np.concatenate(actuals)
         
         return self.cross_val_predictions, self.cross_val_actuals, self.cross_val_mae_mean
-
